@@ -88,6 +88,7 @@ testpaths = ["tests"]
 markers = [
     "guardrail: asserts a guardrail invariant (G1-G7) holds; reported as its own CI check",
     "network: needs real network or an emulator; exempt from the zero-network fixture",
+    "slow: fills every fixture on every platform; the Spike A gate rather than a unit test",
 ]
 
 [tool.coverage.run]

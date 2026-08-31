@@ -64,8 +64,8 @@ jobs:
           enable-cache: true
           cache-dependency-glob: uv.lock
       - run: uv sync --locked --extra dev
-      - name: Test, excluding the separately reported guardrail suite
-        run: uv run pytest -m "not guardrail" --cov --cov-report=term-missing
+      - name: Test, excluding the separately reported guardrail and gate suites
+        run: uv run pytest -m "not guardrail and not slow" --cov --cov-report=term-missing
 
   guardrails:
     # Reported as its own check so a guardrail failure is legible at a glance rather than buried in
@@ -83,3 +83,24 @@ jobs:
       - run: uv sync --locked --extra dev
       - name: Assert the guardrail invariants hold
         run: uv run pytest -m guardrail -v
+
+  spike-a:
+    # The Spike A gate (issue #18). Its own check because it is a phase criterion rather than a
+    # unit test: a platform below 90% field completion is dropped, and lowering the threshold is
+    # not one of the options (ADR-0011).
+    name: Spike A completion
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          version: ${{ env.UV_VERSION }}
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+      - run: uv sync --locked --extra dev
+      - name: Measure completion across every fixture
+        run: |
+          uv run python -m talentagent.jobs.spike_a_gate --work "$RUNNER_TEMP/gate" \
+            | tee -a "$GITHUB_STEP_SUMMARY"
+      - name: Pin the gate criteria
+        run: uv run pytest -m slow -v

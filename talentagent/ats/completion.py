@@ -13,9 +13,9 @@ questions — are out of the denominator, because filling them is not a thing th
 counting them as failures would push towards doing it. Fields still hidden behind an unanswered
 conditional are out too, since they are not yet part of the form.
 
-The map's own coverage is reported separately as `map_rate`. It is the more diagnostic number: a
-falling map rate with a steady completion rate means the platform changed its DOM and the fallback
-is quietly papering over it.
+The share the map handled alone is reported separately as `deterministic_share`. It is the more
+diagnostic number: a falling deterministic share with a steady completion rate means the platform
+changed its DOM and the fallback is quietly papering over it.
 """
 
 from __future__ import annotations
@@ -55,18 +55,15 @@ class Completion:
         return (self.by_map + self.by_fallback) / self.fillable if self.fillable else 1.0
 
     @property
-    def mappable(self) -> int:
-        """Return how many fields the map was expected to handle, excluding what it declined."""
-        return self.by_map + self.unfilled
+    def deterministic_share(self) -> float:
+        """Return the share of fillable fields the map resolved without the model's help.
 
-    @property
-    def map_rate(self) -> float:
-        """Return the share of mappable fields the map resolved without help.
-
-        Diagnostic rather than a gate: a falling map rate with a steady completion rate means a
-        platform changed its DOM and the fallback is papering over it.
+        Measured against every fillable field, not just the ones the map was expected to cover, so
+        it moves when the mix moves. Diagnostic rather than a gate: a falling deterministic share
+        with a steady completion rate means a platform changed its DOM and the fallback is quietly
+        papering over it — which costs quota and turns a deterministic fill into a guessed one.
         """
-        return self.by_map / self.mappable if self.mappable else 1.0
+        return self.by_map / self.fillable if self.fillable else 1.0
 
     def __add__(self, other: Completion) -> Completion:
         """Combine two figures, so a platform's total is the sum over its fixtures."""
