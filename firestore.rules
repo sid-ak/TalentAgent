@@ -1,0 +1,55 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper checking authenticated principal
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Helper checking component claim
+    function hasComponent(comp) {
+      return isAuthenticated() && request.auth.token.component == comp;
+    }
+
+    // Applications: owned by pipeline (Spec §2.1, Architecture §5.1)
+    match /applications/{appId} {
+      allow read: if isAuthenticated();
+      allow write: if hasComponent("pipeline");
+    }
+
+    // Evidence graph: owned by evidence agent (Spec §3.4 Invariant 1)
+    match /evidence_graph/{nodeId} {
+      allow read: if isAuthenticated();
+      allow write: if hasComponent("evidence") &&
+        (request.resource.data.claim == null ||
+         (request.resource.data.evidence is list && request.resource.data.evidence.size() > 0));
+    }
+
+    // Packages: owned by composer (Spec §5.1)
+    match /packages/{pkgId} {
+      allow read: if isAuthenticated();
+      allow write: if hasComponent("composer");
+    }
+
+    // Hypotheses: owned by analyst (Spec §7.1)
+    match /hypotheses/{hypId} {
+      allow read: if isAuthenticated();
+      allow write: if hasComponent("analyst");
+    }
+
+    // Assignment rules: owned by analyst (Spec §7.2)
+    match /assignment_rules/{ruleId} {
+      allow read: if isAuthenticated();
+      allow write: if hasComponent("analyst");
+    }
+
+    // Outcomes: append-only by security rule (Spec §11, ADR-0012)
+    // Create allowed for pipeline; update and delete denied for every principal.
+    match /outcomes/{outcomeId} {
+      allow read: if isAuthenticated();
+      allow create: if hasComponent("pipeline");
+      allow update, delete: if false;
+    }
+  }
+}
