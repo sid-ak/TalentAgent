@@ -51,7 +51,12 @@ def build_registry() -> Registry:
         ),
     )
     for name, side_effect, issue, notes in declared:
-        registry.register(name, side_effect, _not_yet_implemented(name, issue), notes)
+        if name == "query_evidence":
+            from talentagent.evidence.retrieval import query_evidence
+
+            registry.register(name, side_effect, query_evidence, notes)
+        else:
+            registry.register(name, side_effect, _not_yet_implemented(name, issue), notes)
     return registry
 
 
