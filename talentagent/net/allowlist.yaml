@@ -1,0 +1,22 @@
+# G5: the permitted-domain allowlist. Data rather than code, so adding a platform is a reviewable
+# one-line change (issue #7). Anything absent from this file is refused, not warned about.
+#
+# Platforms whose terms prohibit automated interaction are out of scope by design, not by
+# limitation (ADR-0010), so they are absent here and must stay absent.
+
+ats:
+  - boards.greenhouse.io
+  - job-boards.greenhouse.io
+  - api.greenhouse.io
+  - jobs.lever.co
+  - api.lever.co
+  - jobs.ashbyhq.com
+  - api.ashbyhq.com
+
+evidence:
+  - api.github.com
+
+eligibility:
+  # Public structured filing datasets (Spec 6.2). Populated by issue #40.
+  - www.dol.gov
+  - flag.dol.gov
