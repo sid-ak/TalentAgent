@@ -55,8 +55,6 @@ def build_registry() -> Registry:
     return registry
 
 
-#: Agents and the tools each is permitted to hold. The guardrail suite walks this to prove that no
-#: agent entry point reaches a human-only tool (G3).
 AGENT_TOOLSETS: dict[str, tuple[str, ...]] = {
     "triage": ("classify_message",),
     "pipeline": ("draft_followup", "hold_calendar_slot"),
@@ -64,3 +62,8 @@ AGENT_TOOLSETS: dict[str, tuple[str, ...]] = {
     "composer": ("fetch_posting", "query_evidence", "score_eligibility", "fill_application"),
     "analyst": ("score_prior", "run_segment_analysis"),
 }
+"""Agents and the tools each is permitted to hold.
+
+The guardrail suite walks this to prove that no agent entry point reaches a human-only
+tool (G3).
+"""

@@ -23,9 +23,10 @@ import yaml
 
 MAP_ROOT = Path(__file__).parent / "maps"
 
-#: Trailing required-marker glyphs and words the platforms decorate their labels with. Stripped
-#: before comparison so a map keys on the label a human reads.
 _LABEL_NOISE = re.compile(r"[\s*✱†]+$|\s*\(required\)\s*$|\s*\*\s*$", re.I)
+"""Trailing required-marker glyphs and words the platforms decorate their labels with. Stripped
+before comparison so a map keys on the label a human reads.
+"""
 
 
 class Strategy(enum.Enum):
@@ -48,16 +49,18 @@ class Strategy(enum.Enum):
 class MissReason(enum.Enum):
     """Why a field was not filled. These are different failures and are reported separately."""
 
-    #: No rule in the map matched. Expected for employer-authored questions, and the input to the
-    #: bounded model fallback (issue #15).
     NO_RULE = "no_rule"
-    #: A rule matched and declared the field deliberately unhandled — a demographic question, say.
-    #: The fallback must not touch these either.
+    """No rule in the map matched. Expected for employer-authored questions, and the input to the
+    bounded model fallback (issue #15).
+    """
     DECLARED_UNMAPPED = "declared_unmapped"
-    #: A rule matched and named a package path, but the package has nothing there.
+    """A rule matched and declared the field deliberately unhandled — a demographic question,
+    say. The fallback must not touch these either.
+    """
     NO_VALUE = "no_value"
-    #: A rule matched a field that is present in the DOM but not currently visible.
+    """A rule matched and named a package path, but the package has nothing there."""
     NOT_VISIBLE = "not_visible"
+    """A rule matched a field that is present in the DOM but not currently visible."""
 
 
 class FieldMapError(ValueError):

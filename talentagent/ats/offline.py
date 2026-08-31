@@ -18,8 +18,8 @@ from lxml import html as lxml_html
 
 from talentagent.ats.page import FormField
 
-#: Input types that carry a value the resolver can write into.
 _VALUE_KINDS = frozenset({"text", "email", "tel", "url", "number", "date", "textarea", "select"})
+"""Input types that carry a value the resolver can write into."""
 
 
 class UnknownField(KeyError):

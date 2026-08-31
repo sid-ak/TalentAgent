@@ -27,13 +27,13 @@ from talentagent.models.client import ModelClient, QuotaExhausted
 from talentagent.net.fetch import Fetcher
 from talentagent.state.packages import PackageStore
 
-#: Maps a posting host to the platform whose field map applies to it.
 PLATFORM_BY_HOST = {
     "boards.greenhouse.io": "greenhouse",
     "job-boards.greenhouse.io": "greenhouse",
     "jobs.lever.co": "lever",
     "jobs.ashbyhq.com": "ashby",
 }
+"""Maps a posting host to the platform whose field map applies to it."""
 
 
 class UnsupportedPlatform(ValueError):

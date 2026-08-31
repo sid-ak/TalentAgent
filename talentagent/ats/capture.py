@@ -27,8 +27,8 @@ from talentagent.ats.fallback import BoundedFallback
 from talentagent.ats.package import ApplicationPackage
 from talentagent.ats.page import Page
 
-#: Filenames inside a capture directory. Fixed so the review UI can find them without a manifest.
 SCREENSHOT = "form.png"
+"""Filenames inside a capture directory. Fixed so the review UI can find them without a manifest."""
 OFFLINE_SCREENSHOT = "form.html"
 RECORD = "run.json"
 FROZEN_PACKAGE = "package.json"

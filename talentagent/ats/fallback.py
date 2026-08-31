@@ -30,15 +30,16 @@ from talentagent.ats.package import ApplicationPackage
 from talentagent.ats.resolver import Missed
 from talentagent.models.client import ModelClient
 
-#: Answers below this are not written. Chosen so a model that is guessing leaves the field empty.
 DEFAULT_CONFIDENCE_THRESHOLD = 0.6
+"""Answers below this are not written. Chosen so a model that is guessing leaves the field empty."""
 
-#: Most invocations one run may make. A form needing more than this has a map problem, not a
-#: question problem.
 DEFAULT_MAX_INVOCATIONS = 12
+"""Most invocations one run may make. A form needing more than this has a map problem, not a
+question problem.
+"""
 
-#: Names the response schema the model must satisfy. A response failing it is a failure.
 SCHEMA = "ats_custom_field_v1"
+"""Names the response schema the model must satisfy. A response failing it is a failure."""
 
 _PROMPT = (
     "Answer one employer screening question using only the applicant's composed application "

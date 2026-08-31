@@ -24,12 +24,13 @@ from talentagent.net.untrusted import UntrustedText, wrap_untrusted
 
 _ALLOWLIST_PATH = Path(__file__).parent / "allowlist.yaml"
 
-#: How long to wait on an outbound read before giving up, in seconds.
 DEFAULT_TIMEOUT = 30.0
+"""How long to wait on an outbound read before giving up, in seconds."""
 
-#: Signature of a transport: take a URL, return the response body. Injected so the suite can run
-#: with no network at all (ADR-0012) without stubbing the allowlist check out along with it.
 Transport = Callable[[str, float], bytes]
+"""Signature of a transport: take a URL, return the response body. Injected so the suite can run
+with no network at all (ADR-0012) without stubbing the allowlist check out along with it.
+"""
 
 
 class AllowlistViolation(RuntimeError):
@@ -101,8 +102,8 @@ class Fetcher:
         return wrap_untrusted(body.decode("utf-8", errors="replace"), source=host)
 
 
-#: The process-wide fetcher. Components take a `Fetcher` where they need to inject a transport.
 default_fetcher = Fetcher()
+"""The process-wide fetcher. Components take a `Fetcher` where they need to inject a transport."""
 
 
 def fetch(url: str, timeout: float = DEFAULT_TIMEOUT) -> UntrustedText:

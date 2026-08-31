@@ -1,4 +1,17 @@
 # Documentation site toolchain. Pinned so a CI build and a local preview render identically.
 mkdocs==1.6.1
-mkdocs-material==9.5.44
-pymdown-extensions==10.12
+mkdocs-material==9.7.7
+pymdown-extensions==11.0.2
+
+# The generated code reference. mkdocstrings reads the source statically through griffe, so the
+# package itself is not installed to document it — which keeps the docs build independent of the
+# runtime dependencies and of whether the optional browser extra is present.
+mkdocstrings==1.0.6
+mkdocstrings-python==2.0.7
+mkdocs-autorefs==1.4.4
+mkdocs-gen-files==0.6.1
+mkdocs-literate-nav==0.6.3
+mkdocs-section-index==0.3.12
+
+# Used only to format the signatures mkdocstrings renders. Same formatter the code is linted with.
+ruff==0.16.5

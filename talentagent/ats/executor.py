@@ -21,10 +21,11 @@ from talentagent.ats.package import ApplicationPackage
 from talentagent.ats.page import FillLog, FormField, Page
 from talentagent.ats.resolver import Missed, resolve
 
-#: How many enumerate-and-fill passes to make before concluding the form has stopped changing.
-#: Three is comfortably above the deepest conditional chain the target platforms produce, and a cap
-#: rather than a while-loop so a page that rewrites itself cannot spin.
 MAX_PASSES = 4
+"""How many enumerate-and-fill passes to make before concluding the form has stopped changing.
+Three is comfortably above the deepest conditional chain the target platforms produce, and a
+cap rather than a while-loop so a page that rewrites itself cannot spin.
+"""
 
 
 class FormHalted(RuntimeError):

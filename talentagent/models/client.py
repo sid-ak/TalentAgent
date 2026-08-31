@@ -25,19 +25,21 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-#: Where recorded responses live. Committed, and read by the suite instead of the network.
 GOLDEN_ROOT = Path(__file__).parent.parent.parent / "tests" / "fixtures" / "golden"
+"""Where recorded responses live. Committed, and read by the suite instead of the network."""
 
 
 class Tier(enum.Enum):
     """Which model answers a call, and what it is for (Spec 9.2)."""
 
-    #: Classification of every inbound message and the posting-relevance filter. Four times the
-    #: daily allowance of Flash, which is why the highest-volume path is routed here.
     ONE = "gemini-flash-lite"
-    #: State reasoning, requirement-to-evidence mapping, constrained composition, hypothesis
-    #: formation — steps whose output is a judgement rather than a label.
+    """Classification of every inbound message and the posting-relevance filter. Four times the
+    daily allowance of Flash, which is why the highest-volume path is routed here.
+    """
     TWO = "gemini-flash"
+    """State reasoning, requirement-to-evidence mapping, constrained composition, hypothesis
+    formation — steps whose output is a judgement rather than a label.
+    """
 
     @property
     def daily_limit(self) -> int:
@@ -108,8 +110,10 @@ class ModelCall:
         return hashlib.sha256(payload.encode()).hexdigest()[:16]
 
 
-#: A transport takes a call and returns the parsed response. Injected so the suite never needs one.
 Transport = Callable[[ModelCall], dict[str, Any]]
+"""A transport takes a call and returns the parsed response. Injected so the suite never needs
+one.
+"""
 
 
 class QuotaLedger:
