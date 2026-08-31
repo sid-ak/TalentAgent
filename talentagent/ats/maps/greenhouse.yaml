@@ -1,0 +1,45 @@
+# Greenhouse field map. Rules are data: adding a field is a one-line reviewable change and needs no
+# resolver change. Each rule declares more than one identity where the platform gives us more than
+# one, so a cosmetic DOM change on either does not break the map (issue #12).
+platform: greenhouse
+rules:
+  - match: {name: "job_application[first_name]", label: "First Name"}
+    path: identity.first_name
+  - match: {name: "job_application[last_name]", label: "Last Name"}
+    path: identity.last_name
+  - match: {name: "job_application[email]", label: "Email"}
+    path: identity.email
+  - match: {name: "job_application[phone]", label: "Phone"}
+    path: identity.phone
+  - match: {name: "job_application[location]", label: "Location (City)"}
+    path: identity.location
+  - match: {name: "job_application[company]", label: "Current Company"}
+    path: identity.current_company
+  - match: {name: "job_application[urls][LinkedIn]", label: "LinkedIn Profile"}
+    path: links.linkedin
+  - match: {name: "job_application[urls][GitHub]", label: "GitHub URL"}
+    path: links.github
+  - match: {name: "job_application[urls][Portfolio]", label: "Website"}
+    path: links.portfolio
+  - match: {name: "job_application[resume]", label: "Resume/CV"}
+    path: materials.resume
+  - match: {name: "job_application[cover_letter]", label: "Cover Letter"}
+    path: materials.cover_letter
+
+  # Declined deliberately. These are voluntary equal-opportunity questions about the applicant's
+  # person, not about their work. Nothing in the evidence graph answers them, the applicant may
+  # decline to answer at all, and an agent filling them in would be asserting something about the
+  # user that the user did not say. They are reported as DECLARED_UNMAPPED so they show up in the
+  # review rather than being silently skipped, and the bounded fallback cannot touch them.
+  - match: {name: "job_application[demographic][gender]", label: "Gender"}
+    unmapped: true
+    note: "Voluntary demographic question; the applicant answers this themselves."
+  - match: {name: "job_application[demographic][ethnicity]", label: "Race/Ethnicity"}
+    unmapped: true
+    note: "Voluntary demographic question; the applicant answers this themselves."
+  - match: {name: "job_application[demographic][veteran]", label: "Veteran Status"}
+    unmapped: true
+    note: "Voluntary demographic question; the applicant answers this themselves."
+  - match: {name: "job_application[demographic][disability]", label: "Disability Status"}
+    unmapped: true
+    note: "Voluntary demographic question; the applicant answers this themselves."

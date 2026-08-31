@@ -30,6 +30,12 @@ fixtures:
       - {name: "job_application[answers_attributes][1][boolean_value]", unmapped: true}
       - {name: "job_application[answers_attributes][2][boolean_value]", unmapped: true}
       - {name: "job_application[answers_attributes][3][text_value]", unmapped: true}
+      # Declined by the map rather than unmatched by it: voluntary demographic questions are the
+      # applicant's to answer, and an agent filling them would assert something the user did not say.
+      - {name: "job_application[demographic][gender]", unmapped: true, declined: true}
+      - {name: "job_application[demographic][ethnicity]", unmapped: true, declined: true}
+      - {name: "job_application[demographic][veteran]", unmapped: true, declined: true}
+      - {name: "job_application[demographic][disability]", unmapped: true, declined: true}
   conditional.html:
     fields:
       - {name: "job_application[first_name]", path: identity.first_name}

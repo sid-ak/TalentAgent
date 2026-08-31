@@ -34,6 +34,29 @@
     <label for="q_3">Describe a system you designed that had to survive a tenfold traffic increase.</label>
     <textarea id="q_3" name="job_application[answers_attributes][3][text_value]"></textarea>
 
+    <fieldset id="demographic_questions">
+      <legend>Voluntary Self-Identification</legend>
+      <label for="d_gender">Gender</label>
+      <select id="d_gender" name="job_application[demographic][gender]">
+        <option value=""></option><option value="decline">I don't wish to answer</option>
+      </select>
+
+      <label for="d_ethnicity">Race/Ethnicity</label>
+      <select id="d_ethnicity" name="job_application[demographic][ethnicity]">
+        <option value=""></option><option value="decline">I don't wish to answer</option>
+      </select>
+
+      <label for="d_veteran">Veteran Status</label>
+      <select id="d_veteran" name="job_application[demographic][veteran]">
+        <option value=""></option><option value="decline">I don't wish to answer</option>
+      </select>
+
+      <label for="d_disability">Disability Status</label>
+      <select id="d_disability" name="job_application[demographic][disability]">
+        <option value=""></option><option value="decline">I don't wish to answer</option>
+      </select>
+    </fieldset>
+
     <button type="submit" id="submit_app" name="commit">Submit Application</button>
   </form>
 </main>
