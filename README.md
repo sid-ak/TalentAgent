@@ -183,34 +183,6 @@ service account cannot read Cloud Build's source bucket until it is granted
 | Spin-up instructions | Quickstart above |
 | Architecture diagram | Above |
 
-## What is built, and what is not
-
-Built and tested: the evidence graph with its attestation classes and the quarantine that keeps
-model-inferred claims out of composition; the credited package schema, which rejects an uncredited
-line at validation rather than by asking a prompt nicely; per-requirement sufficiency scoring; the
-agent loop; the two-pass ATS executor for Greenhouse, Lever, and Ashby, whose page protocol has no
-submit method; the domain allowlist and the untrusted-text type.
-
-Also built: reading the replies an application gets, from your actual mailbox. A tier-1 call
-labels each message, then the transition table from the specification's Appendix B decides what
-that does to the application. The split matters — the model proposes a label from a closed set, and
-a table it cannot reach decides the state, so an unrecognised message leaves the application exactly
-where it was rather than moving it somewhere invented. `GHOSTED` is unreachable from any message by
-construction, because it is derived from elapsed time; a test pins that.
-
-The mail connection asks for `gmail.readonly` and nothing else, so no token this system holds can
-send anything. Message bodies arrive as `UntrustedText` through the same allowlisted wrapper as
-every other outbound read, and an injection attempt in a message halts the read rather than
-reaching a model — mail is the most hostile input the system takes.
-
-Not built: the five specialist agents the specification describes are still stubs — the only
-agentic surface is the loop above. The inbox reader follows one application at a time; thread
-attribution across many applications, the scheduled triggers that would run it without you, and the
-silence threshold that produces `GHOSTED` were not built. Nothing scores opportunities and there is
-no analyst loop. Guardrail G4 is not enforced, and `/api/status` reports it as `pending` rather than
-claiming otherwise. The two-pass executor has never been run against a live posting, only against
-fixture forms.
-
 [The plan](docs/TalentAgent-Plan.md) records what each of those would involve, for anyone who
 picks the work up.
 
