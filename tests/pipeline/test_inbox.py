@@ -54,12 +54,8 @@ def test_no_message_can_ever_produce_ghosted() -> None:
 
 def test_a_label_with_no_transition_leaves_the_state_alone() -> None:
     """An unanticipated message must not move an application rather than guessing where to."""
-    assert (
-        next_state(ApplicationState.SUBMITTED, MessageLabel.OFFER) is ApplicationState.SUBMITTED
-    )
-    assert (
-        next_state(ApplicationState.ACKED, MessageLabel.IRRELEVANT) is ApplicationState.ACKED
-    )
+    assert next_state(ApplicationState.SUBMITTED, MessageLabel.OFFER) is ApplicationState.SUBMITTED
+    assert next_state(ApplicationState.ACKED, MessageLabel.IRRELEVANT) is ApplicationState.ACKED
 
 
 def test_a_label_outside_the_closed_set_cannot_invent_a_state() -> None:
