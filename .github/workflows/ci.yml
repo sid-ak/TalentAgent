@@ -1,0 +1,85 @@
+name: ci
+
+# The code pipeline. One check here is specific to this project rather than hygiene: the test suite
+# must reach no network at all. Recorded golden responses are the primary control on the Gemini
+# free-tier quota (ADR-0012), and they only save anything if nothing can bypass them — and a test
+# that quietly hits a live model makes the suite non-deterministic, which is the harder failure to
+# notice.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  UV_VERSION: "0.5.11"
+
+jobs:
+  lint:
+    name: Lint and format
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          version: ${{ env.UV_VERSION }}
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+      - run: uv sync --locked --extra dev
+      - name: Lint
+        run: uv run ruff check --output-format=github .
+      - name: Format
+        run: uv run ruff format --check .
+
+  types:
+    name: Type check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          version: ${{ env.UV_VERSION }}
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+      - run: uv sync --locked --extra dev
+      - name: mypy
+        run: uv run mypy
+
+  tests:
+    name: Unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          version: ${{ env.UV_VERSION }}
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+      - run: uv sync --locked --extra dev
+      - name: Test, excluding the separately reported guardrail suite
+        run: uv run pytest -m "not guardrail" --cov --cov-report=term-missing
+
+  guardrails:
+    # Reported as its own check so a guardrail failure is legible at a glance rather than buried in
+    # a unit-test run. These assert that a class of behaviour is impossible, not that a case works,
+    # so they are excluded from the coverage figure.
+    name: Guardrails G1-G7
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          version: ${{ env.UV_VERSION }}
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+      - run: uv sync --locked --extra dev
+      - name: Assert the guardrail invariants hold
+        run: uv run pytest -m guardrail -v
