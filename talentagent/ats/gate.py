@@ -16,8 +16,8 @@ from pathlib import Path
 
 from talentagent.ats.completion import ZERO, Completion
 
-#: The Spike A threshold. A platform below this is dropped rather than the criterion lowered.
 THRESHOLD = 0.90
+"""The Spike A threshold. A platform below this is dropped rather than the criterion lowered."""
 
 
 @dataclass(frozen=True)

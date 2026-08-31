@@ -58,6 +58,7 @@ nav:
       - Phase 1 - two-pass apply: explanations/phase-1-two-pass-apply.md
   - Phase gates:
       - Spike A - two-pass apply: gates/spike-a.md
+  - Code reference: reference/
   - Decision records:
       - ADRs/README.md
       - ADRs/0001-human-retains-irreversible-actions.md
@@ -100,6 +101,46 @@ markdown_extensions:
 
 plugins:
   - search
+  # The code reference is generated from the source on every build, so a module added in a later
+  # phase appears without anyone editing the nav. See scripts/gen_ref_pages.py.
+  - gen-files:
+      scripts:
+        - scripts/gen_ref_pages.py
+  - literate-nav:
+      nav_file: SUMMARY.md
+  - section-index
+  - mkdocstrings:
+      default_handler: python
+      handlers:
+        python:
+          # Read statically from the repository rather than from an installed package, so the docs
+          # build does not need the runtime dependencies.
+          paths: [.]
+          options:
+            docstring_style: google
+            docstring_section_style: table
+            # __init__ docstrings are merged into their class, so a dataclass reads as one
+            # entry rather than two.
+            merge_init_into_class: true
+            # No filter. This is an internal reference, so how a component works is as much the
+            # point as what it exposes: private helpers stay, and so do the operator methods that
+            # are genuinely part of a contract here — Completion supports +, Registry supports
+            # len() and iteration. Griffe reads the source, so dataclass-generated methods that
+            # were never written down do not appear.
+            filters: []
+            # Enum members and constants carry their meaning in an attribute docstring; those
+            # without one are still worth listing, since the value itself is the documentation.
+            show_if_no_docstring: true
+            members_order: source
+            separate_signature: true
+            show_root_heading: true
+            show_root_full_path: false
+            show_signature_annotations: true
+            show_source: true
+            show_symbol_type_heading: true
+            show_symbol_type_toc: true
+            signature_crossrefs: true
+            summary: true
 
 validation:
   omitted_files: warn

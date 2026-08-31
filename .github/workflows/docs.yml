@@ -3,6 +3,9 @@ name: docs
 # Builds the MkDocs site on every change that can affect it, and publishes it to GitHub Pages from
 # the default branch. Pull requests build strictly but never deploy, so a broken internal link fails
 # review rather than the live site.
+#
+# The site includes a code reference generated from the source on every build, so a module added in
+# a later phase documents itself. That is why a change under talentagent/ triggers this workflow.
 
 on:
   push:
@@ -12,12 +15,18 @@ on:
       - "mkdocs.yml"
       - "requirements-docs.txt"
       - ".github/workflows/docs.yml"
+      # The code reference is generated from the source, so a code change changes the site.
+      - "talentagent/**"
+      - "scripts/gen_ref_pages.py"
   pull_request:
     paths:
       - "docs/**"
       - "mkdocs.yml"
       - "requirements-docs.txt"
       - ".github/workflows/docs.yml"
+      # The code reference is generated from the source, so a code change changes the site.
+      - "talentagent/**"
+      - "scripts/gen_ref_pages.py"
   workflow_dispatch:
 
 permissions:
@@ -44,6 +53,9 @@ jobs:
         run: pip install -r requirements-docs.txt
 
       - name: Build strictly
+        # Silences an unrelated ecosystem advisory a plugin prints, so a real warning stays visible.
+        env:
+          DISABLE_MKDOCS_2_WARNING: "true"
         run: mkdocs build --strict --site-dir site
 
       - name: Upload the built site

@@ -26,15 +26,18 @@ if TYPE_CHECKING:  # pragma: no cover - import only for annotations
     from playwright.sync_api import Browser, Playwright
     from playwright.sync_api import Page as PlaywrightPage
 
-#: Selectors that identify a form's submit control on the three target platforms. Used to assert
-#: the control was never activated, never to activate it.
 SUBMIT_SELECTORS = (
     "button[type=submit]",
     "input[type=submit]",
 )
+"""Selectors that identify a form's submit control on the three target platforms. Used to assert
+the control was never activated, never to activate it.
+"""
 
-#: How long to wait for an element's state, in milliseconds. Waits are keyed on state, never slept.
 STATE_TIMEOUT_MS = 10_000
+"""How long to wait for an element's state, in milliseconds. Waits are keyed on state, never
+slept.
+"""
 
 
 class PlaywrightUnavailable(RuntimeError):
@@ -147,7 +150,6 @@ class ChromiumPage:
         return current.split("#")[0].rstrip("/") == self.url.split("#")[0].rstrip("/")
 
 
-#: Enumerates controls in the browser, returning the same shape the offline backend produces.
 _ENUMERATE_JS = """
 () => Array.from(document.querySelectorAll('input, textarea, select')).map(el => {
   const label = el.id
@@ -168,3 +170,4 @@ _ENUMERATE_JS = """
   };
 });
 """
+"""Enumerates controls in the browser, returning the same shape the offline backend produces."""

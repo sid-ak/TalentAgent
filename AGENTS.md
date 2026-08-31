@@ -109,6 +109,15 @@ Every module, class, and function gets a docstring, in core and test files alike
 and pytest hooks. A test's docstring states what behaviour it pins; a fixture's states what it
 provides. One line unless the why is non-obvious. This is enforced in the linter.
 
+Module constants and enum members get one too, written as a string literal directly after the
+assignment — never as a `#:` comment. The comment form reads the same in the source and is invisible
+to the documentation site, so the reasoning it carries silently fails to publish:
+
+```python
+MAX_INVOCATIONS = 12
+"""Most invocations one run may make. A form needing more has a map problem."""
+```
+
 ### Tests
 
 Deterministic, offline, fixture-driven. Phase 0 exists precisely so that no agent work begins before
@@ -209,6 +218,17 @@ The `docs/` tree is published to GitHub Pages by `.github/workflows/docs.yml`.
 3. `mkdocs build --strict`: what CI runs; it fails on a broken internal link or an unrecognised
    reference, so run it before you finish.
 
-Adding a page means adding it to the `nav` in `mkdocs.yml`. Mermaid blocks render natively through
-the superfences configuration — write them as ```` ```mermaid ```` fences and do not add a
+Adding a prose page means adding it to the `nav` in `mkdocs.yml`. Mermaid blocks render natively
+through the superfences configuration — write them as ```` ```mermaid ```` fences and do not add a
 JavaScript diagram library.
+
+The Code reference section is generated, not written. `scripts/gen_ref_pages.py` walks the package
+on every build and emits one page per module, so a module added in a later phase documents itself
+with no nav edit — which is the point, and the reason a change under `talentagent/` triggers the
+docs workflow. The pages are virtual, so there is no generated tree in version control to fall out
+of step with the source.
+
+mkdocstrings reads the source statically through griffe, so the package is not installed to document
+it and the docs build stays independent of the runtime dependencies. Nothing is filtered out:
+private helpers and operator methods are part of how a component works, and this is an internal
+reference rather than a published API.
