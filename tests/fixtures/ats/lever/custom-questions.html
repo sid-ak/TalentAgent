@@ -1,0 +1,35 @@
+<!doctype html>
+<!-- Lever form with employer-authored custom questions. Lever groups these into cards keyed by an
+     opaque card id, so their names are unknowable in advance and the map must report them unmapped. -->
+<html lang="en"><head><meta charset="utf-8"><title>Senior Backend Engineer - Apply</title></head>
+<body>
+<div class="application-page">
+  <form class="application-form" action="/apply" method="post">
+    <label class="application-label" for="lever-name">Full name<span class="required">✱</span></label>
+    <input id="lever-name" type="text" name="name" required>
+
+    <label class="application-label" for="lever-email">Email<span class="required">✱</span></label>
+    <input id="lever-email" type="email" name="email" required>
+
+    <label class="application-label" for="lever-resume">Resume/CV<span class="required">✱</span></label>
+    <input id="lever-resume" type="file" name="resume" required>
+
+    <div class="application-question">
+      <label class="application-label" for="card0-f0">Years of experience with distributed systems</label>
+      <input id="card0-f0" type="text" name="cards[b81f2a3c-0e44-4f77-9f10-1c2d3e4f5a6b][field0]">
+    </div>
+    <div class="application-question">
+      <label class="application-label" for="card0-f1">Do you require visa sponsorship?</label>
+      <select id="card0-f1" name="cards[b81f2a3c-0e44-4f77-9f10-1c2d3e4f5a6b][field1]">
+        <option value=""></option><option value="Yes">Yes</option><option value="No">No</option>
+      </select>
+    </div>
+    <div class="application-question">
+      <label class="application-label" for="card0-f2">What drew you to this role?</label>
+      <textarea id="card0-f2" name="cards[b81f2a3c-0e44-4f77-9f10-1c2d3e4f5a6b][field2]"></textarea>
+    </div>
+
+    <button type="submit" class="postings-btn" id="btn-submit">Submit application</button>
+  </form>
+</div>
+</body></html>

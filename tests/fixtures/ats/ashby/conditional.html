@@ -1,0 +1,28 @@
+<!doctype html>
+<!-- Ashby form with a follow-up question revealed by an earlier answer. -->
+<html lang="en"><head><meta charset="utf-8"><title>Staff Engineer</title></head>
+<body>
+<div class="ashby-application-form-container">
+  <form class="ashby-application-form" action="/application" method="post">
+    <label for="_systemfield_name">Name<span aria-hidden="true">*</span></label>
+    <input id="_systemfield_name" type="text" name="_systemfield_name" required>
+
+    <label for="_systemfield_email">Email<span aria-hidden="true">*</span></label>
+    <input id="_systemfield_email" type="email" name="_systemfield_email" required>
+
+    <label for="f-7d4f">Have you worked remotely before?</label>
+    <select id="f-7d4f" name="7d4f2b0e-5a6c-4184-8d3e-9f0a1b2c3d4e">
+      <option value=""></option><option value="yes">Yes</option><option value="no">No</option>
+    </select>
+
+    <label for="f-8e5a" data-shown-when="7d4f2b0e-5a6c-4184-8d3e-9f0a1b2c3d4e=yes">
+      How long was your longest fully remote role?</label>
+    <input id="f-8e5a" type="text" hidden
+           data-shown-when="7d4f2b0e-5a6c-4184-8d3e-9f0a1b2c3d4e=yes"
+           name="8e5a3c1f-6b7d-4295-9e4f-0a1b2c3d4e5f">
+
+    <button type="submit" class="ashby-application-form-submit-button" id="ashby-submit">
+      Submit Application</button>
+  </form>
+</div>
+</body></html>

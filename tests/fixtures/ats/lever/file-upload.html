@@ -1,0 +1,22 @@
+<!doctype html>
+<!-- Lever form with its resume attachment control. -->
+<html lang="en"><head><meta charset="utf-8"><title>Platform Engineer - Apply</title></head>
+<body>
+<div class="application-page">
+  <form class="application-form" action="/apply" method="post">
+    <label class="application-label" for="lever-name">Full name<span class="required">✱</span></label>
+    <input id="lever-name" type="text" name="name" required>
+
+    <label class="application-label" for="lever-email">Email<span class="required">✱</span></label>
+    <input id="lever-email" type="email" name="email" required>
+
+    <label class="application-label" for="lever-resume">Resume/CV<span class="required">✱</span></label>
+    <input id="lever-resume" type="file" name="resume" required>
+
+    <label class="application-label" for="lever-cover">Cover letter</label>
+    <textarea id="lever-cover" name="comments"></textarea>
+
+    <button type="submit" class="postings-btn" id="btn-submit">Submit application</button>
+  </form>
+</div>
+</body></html>

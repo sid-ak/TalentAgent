@@ -1,0 +1,41 @@
+# Every field the Greenhouse fixtures contain, with the package path it should resolve to. A field
+# marked `unmapped: true` is expected to miss: employer-authored questions carry index- or UUID-keyed
+# names that no map can know in advance, so an honest miss is the designed behaviour and the input
+# to the bounded fallback (ADR-0008). The Spike A completion figure is measured against this file.
+platform: greenhouse
+fixtures:
+  plain.html:
+    fields:
+      - {name: "job_application[first_name]", path: identity.first_name}
+      - {name: "job_application[last_name]", path: identity.last_name}
+      - {name: "job_application[email]", path: identity.email}
+      - {name: "job_application[phone]", path: identity.phone}
+      - {name: "job_application[location]", path: identity.location}
+      - {name: "job_application[urls][LinkedIn]", path: links.linkedin}
+      - {name: "job_application[urls][GitHub]", path: links.github}
+  file-upload.html:
+    fields:
+      - {name: "job_application[first_name]", path: identity.first_name}
+      - {name: "job_application[last_name]", path: identity.last_name}
+      - {name: "job_application[email]", path: identity.email}
+      - {name: "job_application[resume]", path: materials.resume}
+      - {name: "job_application[cover_letter]", path: materials.cover_letter}
+  custom-questions.html:
+    fields:
+      - {name: "job_application[first_name]", path: identity.first_name}
+      - {name: "job_application[last_name]", path: identity.last_name}
+      - {name: "job_application[email]", path: identity.email}
+      - {name: "job_application[resume]", path: materials.resume}
+      - {name: "job_application[answers_attributes][0][text_value]", unmapped: true}
+      - {name: "job_application[answers_attributes][1][boolean_value]", unmapped: true}
+      - {name: "job_application[answers_attributes][2][boolean_value]", unmapped: true}
+      - {name: "job_application[answers_attributes][3][text_value]", unmapped: true}
+  conditional.html:
+    fields:
+      - {name: "job_application[first_name]", path: identity.first_name}
+      - {name: "job_application[last_name]", path: identity.last_name}
+      - {name: "job_application[email]", path: identity.email}
+      - {name: "job_application[answers_attributes][0][boolean_value]", unmapped: true}
+      - {name: "job_application[answers_attributes][1][text_value]", unmapped: true, conditional: true}
+      - {name: "job_application[answers_attributes][2][boolean_value]", unmapped: true}
+      - {name: "job_application[answers_attributes][3][text_value]", unmapped: true, conditional: true}

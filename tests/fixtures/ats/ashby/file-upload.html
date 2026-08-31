@@ -1,0 +1,23 @@
+<!doctype html>
+<!-- Ashby form with its resume attachment control. -->
+<html lang="en"><head><meta charset="utf-8"><title>Platform Engineer</title></head>
+<body>
+<div class="ashby-application-form-container">
+  <form class="ashby-application-form" action="/application" method="post">
+    <label for="_systemfield_name">Name<span aria-hidden="true">*</span></label>
+    <input id="_systemfield_name" type="text" name="_systemfield_name" required>
+
+    <label for="_systemfield_email">Email<span aria-hidden="true">*</span></label>
+    <input id="_systemfield_email" type="email" name="_systemfield_email" required>
+
+    <label for="_systemfield_resume">Resume<span aria-hidden="true">*</span></label>
+    <input id="_systemfield_resume" type="file" name="_systemfield_resume" required>
+
+    <input id="_systemfield_coverletter" type="file" name="_systemfield_coverletter"
+           aria-label="Cover Letter">
+
+    <button type="submit" class="ashby-application-form-submit-button" id="ashby-submit">
+      Submit Application</button>
+  </form>
+</div>
+</body></html>

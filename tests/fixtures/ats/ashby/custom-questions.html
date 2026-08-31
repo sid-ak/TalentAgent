@@ -1,0 +1,32 @@
+<!doctype html>
+<!-- Ashby form with employer-authored questions. Ashby names these by UUID, so they carry no
+     information a field map could key on and must be reported unmapped. -->
+<html lang="en"><head><meta charset="utf-8"><title>Senior Backend Engineer</title></head>
+<body>
+<div class="ashby-application-form-container">
+  <form class="ashby-application-form" action="/application" method="post">
+    <label for="_systemfield_name">Name<span aria-hidden="true">*</span></label>
+    <input id="_systemfield_name" type="text" name="_systemfield_name" required>
+
+    <label for="_systemfield_email">Email<span aria-hidden="true">*</span></label>
+    <input id="_systemfield_email" type="email" name="_systemfield_email" required>
+
+    <label for="_systemfield_resume">Resume<span aria-hidden="true">*</span></label>
+    <input id="_systemfield_resume" type="file" name="_systemfield_resume" required>
+
+    <label for="f-4a1c">How many years have you worked with Kubernetes in production?</label>
+    <input id="f-4a1c" type="text" name="4a1c9e7b-2d3f-4e51-9a0b-6c7d8e9f0a1b">
+
+    <label for="f-5b2d">Do you now or will you in the future require sponsorship?</label>
+    <select id="f-5b2d" name="5b2d0f8c-3e4a-4f62-8b1c-7d8e9f0a1b2c">
+      <option value=""></option><option value="yes">Yes</option><option value="no">No</option>
+    </select>
+
+    <label for="f-6c3e">Tell us about a system you are proud of.</label>
+    <textarea id="f-6c3e" name="6c3e1a9d-4f5b-4073-9c2d-8e9f0a1b2c3d"></textarea>
+
+    <button type="submit" class="ashby-application-form-submit-button" id="ashby-submit">
+      Submit Application</button>
+  </form>
+</div>
+</body></html>

@@ -1,0 +1,43 @@
+<!doctype html>
+<!-- Greenhouse form whose later fields appear only after an earlier answer. data-shown-when is the
+     fixture's declaration of that behaviour, so the offline backend reveals fields the way a live
+     page does and the driver must re-enumerate after each interaction. -->
+<html lang="en"><head><meta charset="utf-8"><title>Apply - Staff Engineer</title></head>
+<body>
+<main id="application_form">
+  <form id="application-form" action="/applications" method="post">
+    <label for="first_name">First Name <span class="required">*</span></label>
+    <input type="text" id="first_name" name="job_application[first_name]" required>
+
+    <label for="last_name">Last Name <span class="required">*</span></label>
+    <input type="text" id="last_name" name="job_application[last_name]" required>
+
+    <label for="email">Email <span class="required">*</span></label>
+    <input type="email" id="email" name="job_application[email]" required>
+
+    <label for="q_0">Will you now or in the future require visa sponsorship?</label>
+    <select id="q_0" name="job_application[answers_attributes][0][boolean_value]">
+      <option value=""></option><option value="1">Yes</option><option value="0">No</option>
+    </select>
+
+    <label for="q_1" data-shown-when="job_application[answers_attributes][0][boolean_value]=1">
+      Which visa status do you currently hold?</label>
+    <input type="text" id="q_1" hidden
+           data-shown-when="job_application[answers_attributes][0][boolean_value]=1"
+           name="job_application[answers_attributes][1][text_value]">
+
+    <label for="q_2">Are you open to relocation?</label>
+    <select id="q_2" name="job_application[answers_attributes][2][boolean_value]">
+      <option value=""></option><option value="1">Yes</option><option value="0">No</option>
+    </select>
+
+    <label for="q_3" data-shown-when="job_application[answers_attributes][2][boolean_value]=1">
+      Which locations would you consider?</label>
+    <input type="text" id="q_3" hidden
+           data-shown-when="job_application[answers_attributes][2][boolean_value]=1"
+           name="job_application[answers_attributes][3][text_value]">
+
+    <button type="submit" id="submit_app" name="commit">Submit Application</button>
+  </form>
+</main>
+</body></html>

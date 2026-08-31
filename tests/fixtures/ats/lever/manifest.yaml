@@ -1,0 +1,32 @@
+# See greenhouse/manifest.yaml for what the fields mean. Lever's custom questions live in cards
+# keyed by an opaque id, so they are unmappable in advance for the same reason.
+platform: lever
+fixtures:
+  plain.html:
+    fields:
+      - {name: "name", path: identity.full_name}
+      - {name: "email", path: identity.email}
+      - {name: "phone", path: identity.phone}
+      - {name: "org", path: identity.current_company}
+      - {name: "urls[LinkedIn]", path: links.linkedin}
+      - {name: "urls[GitHub]", path: links.github}
+  file-upload.html:
+    fields:
+      - {name: "name", path: identity.full_name}
+      - {name: "email", path: identity.email}
+      - {name: "resume", path: materials.resume}
+      - {name: "comments", path: materials.cover_letter_text}
+  custom-questions.html:
+    fields:
+      - {name: "name", path: identity.full_name}
+      - {name: "email", path: identity.email}
+      - {name: "resume", path: materials.resume}
+      - {name: "cards[b81f2a3c-0e44-4f77-9f10-1c2d3e4f5a6b][field0]", unmapped: true}
+      - {name: "cards[b81f2a3c-0e44-4f77-9f10-1c2d3e4f5a6b][field1]", unmapped: true}
+      - {name: "cards[b81f2a3c-0e44-4f77-9f10-1c2d3e4f5a6b][field2]", unmapped: true}
+  conditional.html:
+    fields:
+      - {name: "name", path: identity.full_name}
+      - {name: "email", path: identity.email}
+      - {name: "cards[c92a3b4d-1f55-4a88-b021-2d3e4f5a6b7c][field0]", unmapped: true}
+      - {name: "cards[c92a3b4d-1f55-4a88-b021-2d3e4f5a6b7c][field1]", unmapped: true, conditional: true}

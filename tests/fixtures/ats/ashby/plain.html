@@ -1,0 +1,30 @@
+<!doctype html>
+<!-- Ashby standard application form. Ashby prefixes its built-in fields with _systemfield_ and
+     leans on aria-label rather than a visible <label for> on some controls, which is why the
+     resolver needs an ARIA strategy alongside label text and name. -->
+<html lang="en"><head><meta charset="utf-8"><title>Backend Engineer</title></head>
+<body>
+<div class="ashby-application-form-container">
+  <form class="ashby-application-form" action="/application" method="post">
+    <label for="_systemfield_name">Name<span aria-hidden="true">*</span></label>
+    <input id="_systemfield_name" type="text" name="_systemfield_name" required>
+
+    <label for="_systemfield_email">Email<span aria-hidden="true">*</span></label>
+    <input id="_systemfield_email" type="email" name="_systemfield_email" required>
+
+    <input id="_systemfield_phone" type="tel" name="_systemfield_phone" aria-label="Phone">
+
+    <input id="_systemfield_location" type="text" name="_systemfield_location"
+           aria-label="Location">
+
+    <label for="_systemfield_linkedin">LinkedIn</label>
+    <input id="_systemfield_linkedin" type="url" name="_systemfield_linkedin">
+
+    <label for="_systemfield_github">GitHub</label>
+    <input id="_systemfield_github" type="url" name="_systemfield_github">
+
+    <button type="submit" class="ashby-application-form-submit-button" id="ashby-submit">
+      Submit Application</button>
+  </form>
+</div>
+</body></html>
