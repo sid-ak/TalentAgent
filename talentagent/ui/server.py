@@ -532,7 +532,7 @@ class TalentAgentUIHandler(http.server.BaseHTTPRequestHandler):
         stmt, acc = promote_statement(
             answer=raw_answer,
             store=GLOBAL_SESSION.store,
-            claim=raw_answer.split("\n")[0][:120],
+            claim=raw_answer.strip(),
             skills=matched_skills,
         )
 
@@ -572,7 +572,7 @@ class TalentAgentUIHandler(http.server.BaseHTTPRequestHandler):
             promote_statement(
                 answer=line,
                 store=GLOBAL_SESSION.store,
-                claim=line[:120],
+                claim=line.strip(),
                 skills=line_skills,
             )
         added_count = len(accomplishments)
@@ -604,7 +604,7 @@ class TalentAgentUIHandler(http.server.BaseHTTPRequestHandler):
         stmt, acc = promote_statement(
             answer=raw_text,
             store=GLOBAL_SESSION.store,
-            claim=raw_text.split("\n")[0][:120],
+            claim=raw_text.strip(),
             skills=matched_skills,
         )
 

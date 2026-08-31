@@ -97,3 +97,30 @@ def test_profile_and_statement_flow() -> None:
     _, comp_res = sent_data[-1]
     assert "package" in comp_res
     assert len(comp_res["package"]["bullets"]) > 0
+
+
+def test_statement_claim_retains_full_text_in_evidence_graph() -> None:
+    """Statements exceeding 120 chars retain their full claim text in the evidence graph."""
+    GLOBAL_SESSION.reset()
+    handler = TalentAgentUIHandler.__new__(TalentAgentUIHandler)
+    sent_data: list[tuple[int, dict[str, Any]]] = []
+
+    def mock_send(status_code: int, data: Any) -> None:
+        sent_data.append((status_code, data))
+
+    handler._send_json = mock_send  # type: ignore[method-assign]
+
+    long_statement = (
+        "Architected and deployed a multi-region distributed streaming pipeline handling over "
+        "500k events/sec using Apache Kafka and Rust, reducing end-to-end data latency from "
+        "15 seconds to under 200ms across 4 AWS availability zones."
+    )
+    assert len(long_statement) > 120
+
+    handler._handle_add_statement({"raw_text": long_statement})
+    handler._handle_evidence_graph()
+    _, graph_res = sent_data[-1]
+    acc_nodes = [n for n in graph_res["nodes"] if n["type"] == "accomplishment"]
+    assert len(acc_nodes) == 1
+    assert acc_nodes[0]["claim"] == long_statement
+
