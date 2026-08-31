@@ -135,9 +135,22 @@ Do not use bold. Use headings, lists, and backticks for structure and emphasis.
 
 ### Git
 
-Do not commit. At the end of a set of changes, `git add` the relevant files and leave them staged
-for a human to review — and only when nothing is already staged. If something is already staged,
-stage nothing and say so. No commits means no pull requests opened by an agent.
+Committing is authorised in this repository, which is a deliberate exception to the usual
+leave-it-staged convention. Pushing is not: the human pushes.
+
+One branch per phase, named for it — `phase-1-two-pass-apply`. A phase branch that builds on an
+earlier phase is stacked on that phase's branch rather than on `main`. Nothing is committed directly
+to `main`.
+
+One commit per feature, which in practice means one commit per task issue completed. Commit titles
+take a fixed form so history maps one-to-one onto the tracker:
+
+```
+#<epic-issue>-<task-issue>: What you did in the task.
+```
+
+For example `#11-12: Added the field-map schema and the deterministic resolver.` Phase-level work
+with no task issue of its own uses `0` as the task number — `#11-0: ...`.
 
 ---
 
@@ -165,6 +178,10 @@ remaining labels name the component (`ats-execution`, `evidence`, `composer`, `p
 
 When you finish a task, tick it in the epic rather than only closing the issue — the epic is what a
 reader looks at to see where the phase stands.
+
+When you finish a phase, write `docs/explanations/phase-<n>-<slug>.md`: a plain-English account of
+what now exists and why it matters, for a reader who has not read the specification. Add it to the
+`nav` in `mkdocs.yml`. It is not a changelog of files touched — the commit history already is one.
 
 ---
 
