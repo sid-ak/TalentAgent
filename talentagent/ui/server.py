@@ -40,6 +40,7 @@ from talentagent.evidence.retrieval import _KNOWN_SKILL_KEYWORDS, normalise_requ
 from talentagent.evidence.store import EvidenceStore, LocalEvidenceStore
 from talentagent.models.client import Tier
 from talentagent.models.live import TIER_MODELS, build_live_client
+from talentagent.pipeline.inbox import ApplicationState, read_inbox
 
 DEFAULT_PORT = 8080
 """Default HTTP port for the UI review server."""
@@ -273,6 +274,8 @@ class TalentAgentUIHandler(http.server.BaseHTTPRequestHandler):
             self._handle_reset_profile()
         elif path == "/api/agent/run":
             self._handle_agent_run(body)
+        elif path == "/api/inbox/read":
+            self._handle_inbox_read(body)
         elif path == "/api/extract-requirements":
             self._handle_extract_requirements(body)
         elif path == "/api/compose":
@@ -570,6 +573,30 @@ class TalentAgentUIHandler(http.server.BaseHTTPRequestHandler):
                 "attestation_class": "attested",
             },
         )
+
+    def _handle_inbox_read(self, body: dict[str, Any]) -> None:
+        """Label a batch of inbound messages and walk the application state machine over them."""
+        raw = body.get("messages")
+        if isinstance(raw, list):
+            messages = [str(m).strip() for m in raw if str(m).strip()]
+        else:
+            blocks = str(body.get("text", "")).split("---")
+            messages = [block.strip() for block in blocks if block.strip()]
+        if not messages:
+            self._send_error(400, "No messages to read")
+            return
+        if MODEL_CLIENT is None:
+            self._send_error(503, "Reading the inbox needs a model, and no API key is configured")
+            return
+
+        try:
+            starting = ApplicationState(str(body.get("state", "SUBMITTED")).upper())
+        except ValueError:
+            self._send_error(400, f"Unknown state {body.get('state')!r}")
+            return
+
+        reading = read_inbox(messages[:20], MODEL_CLIENT, starting)
+        self._send_json(200, json.loads(reading.model_dump_json()))
 
     def _handle_ats_fill(self, body: dict[str, Any]) -> None:
         """Run Pass 2 against a fixture form and report the completion it actually measured."""

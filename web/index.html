@@ -101,6 +101,14 @@
   .err { color: var(--bad); font-size: 12.5px; margin-top: 9px; }
   .platform-row { display: flex; gap: 7px; flex-wrap: wrap; margin-bottom: 11px; }
   .platform-row button { margin-top: 0; }
+  .state {
+    font: 11px/1 var(--mono); letter-spacing: .08em; padding: 4px 7px; border-radius: 4px;
+    border: 1px solid var(--line); color: var(--ink-dim);
+  }
+  .state.good { color: var(--good); border-color: #2c4a3a; }
+  .state.bad { color: var(--bad); border-color: #52303a; }
+  .state.warn { color: var(--warn); border-color: #4a3f2c; }
+  .state.accent { color: var(--accent); border-color: #2c3a52; }
   @media (max-width: 1000px) { main { grid-template-columns: 1fr; } }
 </style>
 </head>
@@ -153,6 +161,17 @@
       it enough to go on, you get a question instead of a sentence.
     </p>
     <div id="out"><div class="empty">Run the agent to see the package.</div></div>
+
+    <div class="divider"></div>
+    <h2>4 · After you apply</h2>
+    <p class="lede">
+      Paste the replies you got, separated by a line with three dashes. It works out where the
+      application actually stands — and it will not move anything on a message it doesn't
+      recognise. One thread at a time, for now.
+    </p>
+    <textarea id="inbox" rows="5" placeholder="From: careers@example.com&#10;Thanks for applying, we'll review it.&#10;---&#10;From: recruiter@example.com&#10;Are you free Thursday for a quick call?"></textarea>
+    <button id="read">Read the replies</button>
+    <div id="inbox-out"></div>
   </section>
 </main>
 
@@ -330,6 +349,40 @@ async function runAgent() {
   }
 }
 $('run').onclick = runAgent;
+
+// ── read the replies ────────────────────────────────────────────
+const STATE_TONE = {
+  REJECTED: 'bad', OFFER: 'good', ONSITE: 'good', SCREEN: 'accent', GHOSTED: 'warn',
+};
+
+$('read').onclick = async () => {
+  const text = $('inbox').value.trim();
+  if (!text) return;
+  $('read').disabled = true;
+  $('inbox-out').innerHTML = '<div class="empty">Reading…</div>';
+  try {
+    const r = await api('/api/inbox/read', { text });
+    $('inbox-out').innerHTML = `
+      <div class="card">
+        <div class="bullet-text">This application is at
+          <span class="state ${STATE_TONE[r.final_state] || ''}">${esc(r.final_state)}</span>
+        </div>
+        <div class="credit">
+          ${r.messages.map((m) => `
+            ${esc(m.company || 'unnamed sender')} &mdash; ${esc(m.label.replace(/_/g, ' '))}
+            ${m.state_before === m.state_after
+              ? '<br>&nbsp;&nbsp;left it where it was'
+              : `<br>&nbsp;&nbsp;${esc(m.state_before)} &rarr; ${esc(m.state_after)}`}
+            ${m.reason ? `<br>&nbsp;&nbsp;<i>${esc(m.reason)}</i>` : ''}
+          `).join('<br><br>')}
+        </div>
+      </div>`;
+  } catch (e) {
+    $('inbox-out').innerHTML = `<div class="err">${esc(e.message)}</div>`;
+  } finally {
+    $('read').disabled = false;
+  }
+};
 
 refreshStatus();
 refreshGraph();

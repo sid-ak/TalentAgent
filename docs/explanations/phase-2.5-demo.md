@@ -100,12 +100,32 @@ randomises per process.
 
 Deleting it cost the demo a feature and is the single most important change in this phase.
 
+### Reading what comes back
+
+An application does not end when it is sent, and the part that is genuinely tedious is keeping track
+of where each one stands. So the surface takes the replies you got and works out the state.
+
+The division of labour is the same one the composer uses. Reading an email and deciding it is a
+rejection is a labelling problem over a closed set, which is exactly what tier 1 is for. Deciding
+what a rejection *does* to an application is not a judgement at all — it is the transition table in
+Appendix B of the specification, and a table cannot hallucinate a state that does not exist. The
+model proposes; the table disposes. A message the table has no transition for leaves the application
+exactly where it was, which is what you want when a recruiter sends something nobody anticipated.
+
+`GHOSTED` is unreachable from any message, by construction rather than by convention: it is derived
+from elapsed silence, so no label maps to it, and a test walks every label against every state to
+prove none arrives there.
+
 ## What this does not do
 
 The five specialist agents in the specification are still one-line stubs. The only agentic surface is
-the single loop above. Nothing reads your inbox, nothing scores opportunities, and no analyst loop
-exists — those are Phase 3, and [the plan](../TalentAgent-Plan.md) says so plainly rather than
-implying otherwise.
+the single loop above.
+
+The inbox reader takes pasted text rather than connecting to Gmail, and follows one application at a
+time. Thread attribution across many applications, the scheduled triggers that would make it run
+without you, and the silence threshold that produces `GHOSTED` are all still Phase 3. Nothing scores
+opportunities and no analyst loop exists — also Phase 3, and [the plan](../TalentAgent-Plan.md) says
+so plainly rather than implying otherwise.
 
 Guardrails G1, G2, G5, and G7 have real mechanisms with tests that fail when the mechanism is removed.
 G3 holds structurally, because the page protocol has no submit method. G4 is not enforced, and the

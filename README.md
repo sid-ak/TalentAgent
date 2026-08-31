@@ -52,6 +52,8 @@ flowchart LR
     MC <--> GEM
     UI -->|"POST /api/ats-fill"| ATS
     ATS -->|"fills, cannot submit"| FORM["employer form"]
+    UI -->|"POST /api/inbox/read"| INBOX["pipeline/inbox.py<br/>label, then walk a table"]
+    INBOX --> MC
 ```
 
 The load-bearing detail is that `retrieval.py` sits between the posting and the model. Gemini is
@@ -69,13 +71,15 @@ Requires Python 3.12+ and a [Gemini API key](https://aistudio.google.com/apikey)
 4. `uv run python scripts/serve_demo.py`: start the server on http://127.0.0.1:8080.
 5. Open http://127.0.0.1:8080 and, in order: write a line or two about what you have done, paste a
    job posting, then run the agent.
+6. Optionally, fill the employer's form from the result, and paste in the replies an application
+   got to see where it stands.
 
 Without a key the server still runs: composition falls back to your own wording used as-is, and the
 trace says so rather than pretending.
 
 ### Run the tests
 
-1. `uv run pytest -q`: 263 tests, about 1.5 seconds, zero network calls. A socket guard in
+1. `uv run pytest -q`: 280 tests, about 1.5 seconds, zero network calls. A socket guard in
    `tests/conftest.py` fails any test that tries to reach a model.
 2. `uv run pytest -m guardrail`: just the invariant tests.
 3. `uv run ruff check . && uv run mypy`: lint and types.
@@ -114,10 +118,19 @@ line at validation rather than by asking a prompt nicely; per-requirement suffic
 agent loop; the two-pass ATS executor for Greenhouse, Lever, and Ashby, whose page protocol has no
 submit method; the domain allowlist and the untrusted-text type.
 
-Not built: the five specialist agents the specification describes are still stubs — the only agentic
-surface is the single loop above. Nothing reads your inbox, nothing scores opportunities, and there
-is no analyst loop. Guardrail G4 is not enforced, and `/api/status` reports it as `pending` rather
-than claiming otherwise.
+Also built: reading the replies an application gets. Paste them in and a tier-1 call labels each
+one, then the transition table from the specification's Appendix B decides what that does to the
+application. The split matters — the model proposes a label from a closed set, and a table it
+cannot reach decides the state, so an unrecognised message leaves the application exactly where it
+was rather than moving it somewhere invented. `GHOSTED` is unreachable from any message by
+construction, because it is derived from elapsed time; a test pins that.
+
+Not built: the five specialist agents the specification describes are still stubs — the only
+agentic surface is the loop above. The inbox reader takes pasted text rather than connecting to
+Gmail, and it follows one application at a time: thread attribution across many applications,
+the scheduled triggers, and the silence threshold that produces `GHOSTED` are all Phase 3. Nothing
+scores opportunities and there is no analyst loop. Guardrail G4 is not enforced, and `/api/status`
+reports it as `pending` rather than claiming otherwise.
 
 [The plan](docs/TalentAgent-Plan.md) says which phase owns each of those.
 

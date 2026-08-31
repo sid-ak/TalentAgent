@@ -19,8 +19,11 @@ COPY scripts/ ./scripts/
 COPY tests/fixtures/ats/ ./tests/fixtures/ats/
 
 # Cloud Run injects PORT and routes to 0.0.0.0; the launcher reads both from the environment.
+# Both paths default to positions in the source tree, which stop being true once the package is
+# installed into site-packages, so the image states where they actually are.
 ENV HOST=0.0.0.0 \
     TALENTAGENT_WEB_DIR=/app/web \
+    TALENTAGENT_ATS_FIXTURES=/app/tests/fixtures/ats \
     PYTHONUNBUFFERED=1
 
 CMD ["python", "scripts/serve_demo.py"]
