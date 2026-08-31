@@ -108,3 +108,18 @@ def test_extract_posting_requirements_from_html_and_text() -> None:
     reqs_text = extract_posting_requirements(sample_text)
     assert len(reqs_text) == 2
     assert "5+ years of experience with Kubernetes" in reqs_text
+
+
+def test_requirement_texts_accepts_both_shapes_the_model_returns() -> None:
+    """Bare strings and objects both yield requirements, so neither shape drops the batch.
+
+    Rejecting one shape meant falling back to line splitting with no error anywhere, which is how
+    a model call goes missing unnoticed.
+    """
+    from talentagent.agent.loop import _requirement_texts
+
+    assert _requirement_texts(["own Kubernetes", "write Go"]) == ["own Kubernetes", "write Go"]
+    assert _requirement_texts([{"text": "own Kubernetes"}]) == ["own Kubernetes"]
+    assert _requirement_texts([{"requirement": "write Go"}]) == ["write Go"]
+    assert _requirement_texts([{"text": "  "}, None, 7]) == []
+    assert _requirement_texts("not a list") == []

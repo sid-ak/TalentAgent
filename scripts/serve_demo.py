@@ -6,7 +6,7 @@ is how Cloud Run starts a container: it injects PORT and expects the process to 
 0.0.0.0. Locally, with neither set, the defaults keep the server on loopback.
 
 Usage:
-    python scripts/serve_demo.py [--port 8080] [--host 127.0.0.1]
+    uv run python scripts/serve_demo.py [--port 8080] [--host 127.0.0.1]
 """
 
 from __future__ import annotations

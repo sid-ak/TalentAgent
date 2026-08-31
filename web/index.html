@@ -101,6 +101,24 @@
   .err { color: var(--bad); font-size: 12.5px; margin-top: 9px; }
   .platform-row { display: flex; gap: 7px; flex-wrap: wrap; margin-bottom: 11px; }
   .platform-row button { margin-top: 0; }
+  .id-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  #jdurl {
+    width: 100%; background: var(--panel); color: var(--ink); border: 1px solid var(--line);
+    border-radius: 6px; padding: 9px 11px; font: 12.5px var(--sans);
+  }
+  #jdurl:focus { outline: none; border-color: var(--accent); }
+  .filebtn {
+    display: inline-block; background: transparent; color: var(--ink-dim);
+    border: 1px dashed var(--line); border-radius: 7px; padding: 9px 15px;
+    font: 600 13px var(--sans); cursor: pointer;
+  }
+  .filebtn:hover { border-color: var(--accent); color: var(--ink); }
+  .id-grid input {
+    background: var(--panel); color: var(--ink); border: 1px solid var(--line);
+    border-radius: 6px; padding: 8px 10px; font: 12.5px var(--sans); min-width: 0;
+  }
+  .id-grid input:focus { outline: none; border-color: var(--accent); }
+  .saved { font: 11px var(--mono); color: var(--good); margin-left: 9px; }
   .state {
     font: 11px/1 var(--mono); letter-spacing: .08em; padding: 4px 7px; border-radius: 4px;
     border: 1px solid var(--line); color: var(--ink-dim);
@@ -131,8 +149,35 @@
       Write it however you'd say it out loud. This is the only material the agent is allowed to
       work from, so nothing it produces can drift away from what's here.
     </p>
-    <textarea id="ev" rows="4" placeholder="Cut Kubernetes rollout time from 40 minutes to 6 by rewriting the deploy pipeline in Go."></textarea>
+    <label class="filebtn">
+      Upload your resume
+      <input type="file" id="resume" accept="application/pdf,text/plain" hidden>
+    </label>
+    <span id="resume-note" class="saved" hidden></span>
+    <p class="lede" style="margin:9px 0 12px">
+      It splits the file into the things you claim, copying each one word for word. Anything it
+      cannot find verbatim in your file is thrown away rather than added.
+    </p>
+    <textarea id="ev" rows="3" placeholder="Or write one yourself: cut Kubernetes rollout time from 40 minutes to 6 by rewriting the deploy pipeline in Go."></textarea>
     <button id="add">Add this</button>
+
+    <div class="divider"></div>
+    <h2>Who you are</h2>
+    <p class="lede">
+      Only what an employer's form asks for. It is typed onto the form as-is, never rephrased.
+    </p>
+    <div class="id-grid">
+      <input id="first_name" placeholder="First name" autocomplete="given-name">
+      <input id="last_name" placeholder="Last name" autocomplete="family-name">
+      <input id="email" placeholder="Email" type="email" autocomplete="email">
+      <input id="phone" placeholder="Phone" autocomplete="tel">
+      <input id="location" placeholder="Location">
+      <input id="current_company" placeholder="Current employer">
+      <input id="linkedin" placeholder="LinkedIn URL">
+      <input id="github" placeholder="GitHub URL">
+    </div>
+    <button id="save-id" class="ghost">Save details</button>
+    <span id="id-saved" class="saved" hidden>saved</span>
     <div class="divider"></div>
     <h2>Your material</h2>
     <div id="nodes"><div class="empty">Nothing yet. Add something above.</div></div>
@@ -145,7 +190,11 @@
       Paste a posting. The agent reads it and works through it one requirement at a time. Every
       line below is a step it actually took, not a summary written afterwards.
     </p>
-    <textarea id="jd" rows="7" placeholder="Paste a job description…"></textarea>
+    <input id="jdurl" placeholder="Paste a Greenhouse, Lever, or Ashby posting URL">
+    <p class="lede" style="margin:7px 0 12px">
+      It reads only the platforms whose terms permit it. Anywhere else is refused, not attempted.
+    </p>
+    <textarea id="jd" rows="5" placeholder="Or paste the posting text here instead…"></textarea>
     <button id="run">Run the agent</button>
     <div id="err" class="err" hidden></div>
     <div class="divider"></div>
@@ -165,12 +214,21 @@
     <div class="divider"></div>
     <h2>4 · After you apply</h2>
     <p class="lede">
-      Paste the replies you got, separated by a line with three dashes. It works out where the
-      application actually stands — and it will not move anything on a message it doesn't
-      recognise. One thread at a time, for now.
+      It reads the replies in your inbox and works out where the application actually stands. It
+      will not move anything on a message it doesn't recognise — and it can only read. There is no
+      send permission on the connection at all.
     </p>
-    <textarea id="inbox" rows="5" placeholder="From: careers@example.com&#10;Thanks for applying, we'll review it.&#10;---&#10;From: recruiter@example.com&#10;Are you free Thursday for a quick call?"></textarea>
-    <button id="read">Read the replies</button>
+    <div id="inbox-connected" hidden>
+      <button id="sync">Read my inbox</button>
+    </div>
+    <div id="inbox-manual" hidden>
+      <p class="lede" style="color:var(--warn)">
+        Gmail isn't connected on this deployment yet, so paste the replies below instead,
+        separated by a line with three dashes.
+      </p>
+      <textarea id="inbox" rows="5" placeholder="From: careers@example.com&#10;Thanks for applying, we'll review it.&#10;---&#10;From: recruiter@example.com&#10;Are you free Thursday for a quick call?"></textarea>
+      <button id="read">Read the pasted replies</button>
+    </div>
     <div id="inbox-out"></div>
   </section>
 </main>
@@ -196,6 +254,8 @@ async function refreshStatus() {
     const p = $('p-model');
     p.textContent = s.gemini_connected ? `Gemini · ${s.models.tier_2}` : 'No API key · offline mode';
     p.className = 'pill ' + (s.gemini_connected ? 'on' : 'off');
+    $('inbox-connected').hidden = !s.gmail_connected;
+    $('inbox-manual').hidden = !!s.gmail_connected;
   } catch { /* header is cosmetic; the page still works */ }
 }
 
@@ -213,6 +273,29 @@ async function refreshGraph() {
         </div>`).join('');
 }
 
+// ── who you are ─────────────────────────────────────────────────
+const ID_FIELDS = ['first_name', 'last_name', 'email', 'phone', 'location', 'current_company'];
+const LINK_FIELDS = ['linkedin', 'github'];
+
+async function loadIdentity() {
+  try {
+    const p = await api('/api/profile');
+    ID_FIELDS.forEach((f) => { if (p.identity[f]) $(f).value = p.identity[f]; });
+    LINK_FIELDS.forEach((f) => { if (p.links[f]) $(f).value = p.links[f]; });
+  } catch { /* the form still works empty */ }
+}
+
+$('save-id').onclick = async () => {
+  const identity = {}; ID_FIELDS.forEach((f) => { identity[f] = $(f).value.trim(); });
+  const links = {}; LINK_FIELDS.forEach((f) => { links[f] = $(f).value.trim(); });
+  $('save-id').disabled = true;
+  try {
+    await api('/api/profile', { identity, links });
+    $('id-saved').hidden = false;
+    setTimeout(() => { $('id-saved').hidden = true; }, 2500);
+  } finally { $('save-id').disabled = false; }
+};
+
 // ── add evidence ────────────────────────────────────────────────
 $('add').onclick = async () => {
   const text = $('ev').value.trim();
@@ -223,6 +306,36 @@ $('add').onclick = async () => {
     $('ev').value = '';
     await refreshGraph();
   } finally { $('add').disabled = false; }
+};
+
+// ── resume upload ───────────────────────────────────────────────
+$('resume').onchange = async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const note = $('resume-note');
+  note.hidden = false;
+  note.style.color = 'var(--ink-dim)';
+  note.textContent = `reading ${file.name}…`;
+  try {
+    const body = { filename: file.name };
+    if (file.type === 'application/pdf') {
+      const buf = new Uint8Array(await file.arrayBuffer());
+      let bin = '';
+      buf.forEach((b) => { bin += String.fromCharCode(b); });
+      body.content_base64 = btoa(bin);
+    } else {
+      body.text = await file.text();
+    }
+    const r = await api('/api/profile/upload-resume', body);
+    note.style.color = 'var(--good)';
+    note.textContent = `${r.nodes_added} thing${r.nodes_added === 1 ? '' : 's'} added`;
+    await refreshGraph();
+  } catch (err) {
+    note.style.color = 'var(--bad)';
+    note.textContent = err.message;
+  } finally {
+    e.target.value = '';
+  }
 };
 
 // ── run the agent ───────────────────────────────────────────────
@@ -331,12 +444,14 @@ function renderPackage(run) {
 
 async function runAgent() {
   const posting = $('jd').value.trim();
-  if (!posting) return;
+  const url = $('jdurl').value.trim();
+  if (!posting && !url) return;
   $('run').disabled = true;
   $('run').textContent = 'Running…';
   $('err').hidden = true;
   try {
-    const run = await api('/api/agent/run', { posting_text: posting });
+    const run = await api('/api/agent/run',
+      posting ? { posting_text: posting } : { posting_url: url });
     await renderTrace(run.steps);
     renderPackage(run);
     await refreshStatus();
@@ -355,15 +470,13 @@ const STATE_TONE = {
   REJECTED: 'bad', OFFER: 'good', ONSITE: 'good', SCREEN: 'accent', GHOSTED: 'warn',
 };
 
-$('read').onclick = async () => {
-  const text = $('inbox').value.trim();
-  if (!text) return;
-  $('read').disabled = true;
-  $('inbox-out').innerHTML = '<div class="empty">Reading…</div>';
-  try {
-    const r = await api('/api/inbox/read', { text });
-    $('inbox-out').innerHTML = `
+function renderReading(r) {
+  const from = r.source === 'gmail'
+    ? `${r.fetched} message${r.fetched === 1 ? '' : 's'} read from your inbox`
+    : `${r.messages.length} pasted message${r.messages.length === 1 ? '' : 's'}`;
+  $('inbox-out').innerHTML = `
       <div class="card">
+        <div class="credit" style="border:0;padding:0;margin:0 0 8px">${esc(from)}</div>
         <div class="bullet-text">This application is at
           <span class="state ${STATE_TONE[r.final_state] || ''}">${esc(r.final_state)}</span>
         </div>
@@ -377,15 +490,30 @@ $('read').onclick = async () => {
           `).join('<br><br>')}
         </div>
       </div>`;
+}
+
+async function readInbox(path, payload, btn) {
+  btn.disabled = true;
+  $('inbox-out').innerHTML = '<div class="empty">Reading…</div>';
+  try {
+    renderReading(await api(path, payload));
   } catch (e) {
     $('inbox-out').innerHTML = `<div class="err">${esc(e.message)}</div>`;
   } finally {
-    $('read').disabled = false;
+    btn.disabled = false;
   }
+}
+
+$('sync').onclick = () => readInbox('/api/inbox/sync', {}, $('sync'));
+
+$('read').onclick = () => {
+  const text = $('inbox').value.trim();
+  if (text) readInbox('/api/inbox/read', { text }, $('read'));
 };
 
 refreshStatus();
 refreshGraph();
+loadIdentity();
 </script>
 </body>
 </html>

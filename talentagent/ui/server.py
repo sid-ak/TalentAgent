@@ -36,10 +36,22 @@ from talentagent.evidence.graph import (
     Skill,
     Statement,
 )
-from talentagent.evidence.retrieval import _KNOWN_SKILL_KEYWORDS, normalise_requirement
+from talentagent.evidence.resume import extract_accomplishments
+from talentagent.evidence.retrieval import (
+    _KNOWN_SKILL_KEYWORDS,
+    extract_posting_requirements,
+    normalise_requirement,
+)
 from talentagent.evidence.store import EvidenceStore, LocalEvidenceStore
 from talentagent.models.client import Tier
 from talentagent.models.live import TIER_MODELS, build_live_client
+from talentagent.net.fetch import AllowlistViolation, default_fetcher
+from talentagent.pipeline.gmail import (
+    GmailCredentials,
+    GmailError,
+    GmailNotConfigured,
+    recent_messages,
+)
 from talentagent.pipeline.inbox import ApplicationState, read_inbox
 
 DEFAULT_PORT = 8080
@@ -176,6 +188,21 @@ GLOBAL_SESSION = CandidateSession()
 """Singleton candidate session for the active application workflow."""
 
 
+def _posting_from_url(url: str) -> str:
+    """Fetch a posting and return the requirement text found in it.
+
+    The fetch goes through the allowlist, so this reads the three ATS platforms whose terms permit
+    it and refuses everything else — including the aggregators that prohibit automated access
+    (ADR-0010, G5). The page arrives as untrusted data and is only ever summarised into
+    requirements; nothing in it can instruct the agent (G7).
+    """
+    page = default_fetcher.fetch(url)
+    requirements = extract_posting_requirements(page.as_data())
+    if not requirements:
+        raise ValueError("no requirements found on that page")
+    return "\n".join(f"- {line}" for line in requirements)
+
+
 def _session_package() -> ApplicationPackage:
     """Build a package from the session's identity alone, for a form-fill with no composition.
 
@@ -276,6 +303,8 @@ class TalentAgentUIHandler(http.server.BaseHTTPRequestHandler):
             self._handle_agent_run(body)
         elif path == "/api/inbox/read":
             self._handle_inbox_read(body)
+        elif path == "/api/inbox/sync":
+            self._handle_inbox_sync(body)
         elif path == "/api/extract-requirements":
             self._handle_extract_requirements(body)
         elif path == "/api/compose":
@@ -301,6 +330,7 @@ class TalentAgentUIHandler(http.server.BaseHTTPRequestHandler):
                 "system": "TalentAgent",
                 "backend": "python",
                 "gemini_connected": MODEL_CLIENT is not None,
+                "gmail_connected": GmailCredentials.from_env() is not None,
                 "models": {
                     "tier_1": TIER_MODELS[Tier.ONE][0],
                     "tier_2": TIER_MODELS[Tier.TWO][0],
@@ -340,6 +370,9 @@ class TalentAgentUIHandler(http.server.BaseHTTPRequestHandler):
             email=ident_data.get("email", GLOBAL_SESSION.identity.email),
             phone=ident_data.get("phone", GLOBAL_SESSION.identity.phone),
             location=ident_data.get("location", GLOBAL_SESSION.identity.location),
+            current_company=ident_data.get(
+                "current_company", GLOBAL_SESSION.identity.current_company
+            ),
         )
 
         GLOBAL_SESSION.links = Links(
@@ -429,9 +462,21 @@ class TalentAgentUIHandler(http.server.BaseHTTPRequestHandler):
 
     def _handle_agent_run(self, body: dict[str, Any]) -> None:
         """Run the agent loop over a posting and return its trace, package, and open gaps."""
-        posting_text = body.get("posting_text", "").strip()
+        posting_text = str(body.get("posting_text", "")).strip()
+        posting_url = str(body.get("posting_url", "")).strip()
+
+        if posting_url and not posting_text:
+            try:
+                posting_text = _posting_from_url(posting_url)
+            except AllowlistViolation as exc:
+                self._send_error(403, str(exc))
+                return
+            except Exception as exc:  # noqa: BLE001 - an unreachable posting is the caller's
+                self._send_error(502, f"Could not read that posting: {exc}")
+                return
+
         if not posting_text:
-            self._send_error(400, "Empty posting text")
+            self._send_error(400, "Give the agent a posting, by text or by URL")
             return
 
         if not get_all_nodes(GLOBAL_SESSION.store):
@@ -521,18 +566,16 @@ class TalentAgentUIHandler(http.server.BaseHTTPRequestHandler):
             self._send_error(400, "No resume text extracted")
             return
 
-        lines = [line.strip("-•* ").strip() for line in resume_text.splitlines() if line.strip()]
-        added_count = 0
-        for line in lines:
-            if len(line) > 20 and not line.startswith("http"):
-                line_skills = _extract_and_save_skills(GLOBAL_SESSION.store, line)
-                promote_statement(
-                    answer=line,
-                    store=GLOBAL_SESSION.store,
-                    claim=line[:120],
-                    skills=line_skills,
-                )
-                added_count += 1
+        accomplishments, used_model = extract_accomplishments(resume_text, MODEL_CLIENT)
+        for line in accomplishments:
+            line_skills = _extract_and_save_skills(GLOBAL_SESSION.store, line)
+            promote_statement(
+                answer=line,
+                store=GLOBAL_SESSION.store,
+                claim=line[:120],
+                skills=line_skills,
+            )
+        added_count = len(accomplishments)
 
         GLOBAL_SESSION.resume_filename = filename
         GLOBAL_SESSION.materials = Materials(resume=Path(filename))
@@ -543,6 +586,7 @@ class TalentAgentUIHandler(http.server.BaseHTTPRequestHandler):
                 "filename": filename,
                 "extracted_length": len(resume_text),
                 "nodes_added": added_count,
+                "used_model": used_model,
                 "total_nodes": len(get_all_nodes(GLOBAL_SESSION.store)),
             },
         )
@@ -573,6 +617,47 @@ class TalentAgentUIHandler(http.server.BaseHTTPRequestHandler):
                 "attestation_class": "attested",
             },
         )
+
+    def _handle_inbox_sync(self, body: dict[str, Any]) -> None:
+        """Read the user's own mailbox and derive application state from what it finds."""
+        credentials = GmailCredentials.from_env()
+        if credentials is None:
+            self._send_error(503, GmailNotConfigured().args[0])
+            return
+        if MODEL_CLIENT is None:
+            self._send_error(503, "Reading the inbox needs a model, and no API key is configured")
+            return
+
+        try:
+            starting = ApplicationState(str(body.get("state", "SUBMITTED")).upper())
+        except ValueError:
+            self._send_error(400, f"Unknown state {body.get('state')!r}")
+            return
+
+        try:
+            fetched = recent_messages(credentials)
+        except GmailError as exc:
+            self._send_error(502, f"Gmail refused the read: {exc}")
+            return
+
+        if not fetched:
+            self._send_json(
+                200,
+                {
+                    "messages": [],
+                    "final_state": starting.value,
+                    "used_model": False,
+                    "source": "gmail",
+                    "fetched": 0,
+                },
+            )
+            return
+
+        reading = read_inbox([text.as_data() for text in fetched], MODEL_CLIENT, starting)
+        payload = json.loads(reading.model_dump_json())
+        payload["source"] = "gmail"
+        payload["fetched"] = len(fetched)
+        self._send_json(200, payload)
 
     def _handle_inbox_read(self, body: dict[str, Any]) -> None:
         """Label a batch of inbound messages and walk the application state machine over them."""
@@ -626,7 +711,7 @@ class TalentAgentUIHandler(http.server.BaseHTTPRequestHandler):
             result = fill_form(page, load_map(platform), package)
             halted = None
         except HaltedRun as exc:
-            result = exc.partial
+            result = exc.partial_fill()
             halted = str(exc)
 
         sources = result.log.sources()

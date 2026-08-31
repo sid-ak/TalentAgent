@@ -13,9 +13,11 @@ G7 is unchanged in strength but concentrated here: every value this module retur
 
 from __future__ import annotations
 
+import urllib.parse
 import urllib.request
-from collections.abc import Callable
+from collections.abc import Mapping
 from pathlib import Path
+from typing import Protocol
 from urllib.parse import urlparse
 
 import yaml
@@ -27,10 +29,31 @@ _ALLOWLIST_PATH = Path(__file__).parent / "allowlist.yaml"
 DEFAULT_TIMEOUT = 30.0
 """How long to wait on an outbound read before giving up, in seconds."""
 
-Transport = Callable[[str, float], bytes]
-"""Signature of a transport: take a URL, return the response body. Injected so the suite can run
-with no network at all (ADR-0012) without stubbing the allowlist check out along with it.
-"""
+
+class Transport(Protocol):
+    """Signature of a transport: take a request, return the response body.
+
+    Injected so the suite can run with no network at all (ADR-0012) without stubbing the allowlist
+    check out along with it. `headers` and `data` exist because some permitted hosts need a bearer
+    token or a form post — Gmail needs both — and routing those through a second code path would
+    mean G5 and G7 had two chokepoints to hold instead of one.
+    """
+
+    def __call__(
+        self,
+        url: str,
+        timeout: float,
+        /,
+        *,
+        headers: Mapping[str, str] | None = None,
+        data: bytes | None = None,
+    ) -> bytes:
+        """Perform the request and return the raw response body."""
+        ...
+
+    # The URL and timeout are positional-only so an implementation may name them whatever reads
+    # best — several stubs call them `_url` and `_timeout` to show they are ignored — while the
+    # two optional arguments stay keyword-only and so keep their names as part of the contract.
 
 
 class AllowlistViolation(RuntimeError):
@@ -54,9 +77,16 @@ def load_allowlist(path: Path | None = None) -> frozenset[str]:
     return frozenset(host for group in raw.values() for host in group)
 
 
-def _urllib_transport(url: str, timeout: float) -> bytes:
+def _urllib_transport(
+    url: str,
+    timeout: float,
+    *,
+    headers: Mapping[str, str] | None = None,
+    data: bytes | None = None,
+) -> bytes:
     """Fetch `url` with the standard library. The only outbound HTTP call in the system."""
-    request = urllib.request.Request(url, headers={"User-Agent": "TalentAgent/0.1"})
+    merged = {"User-Agent": "TalentAgent/0.1", **(headers or {})}
+    request = urllib.request.Request(url, headers=merged, data=data)
     with urllib.request.urlopen(request, timeout=timeout) as response:  # noqa: S310
         body: bytes = response.read()
     return body
@@ -90,16 +120,45 @@ class Fetcher:
             raise AllowlistViolation(host or url)
         return host
 
-    def fetch(self, url: str, timeout: float = DEFAULT_TIMEOUT) -> UntrustedText:
+    def fetch(
+        self,
+        url: str,
+        timeout: float = DEFAULT_TIMEOUT,
+        *,
+        headers: Mapping[str, str] | None = None,
+        data: bytes | None = None,
+    ) -> UntrustedText:
         """Read `url` and return its body as untrusted third-party text.
+
+        Passing `data` makes this a POST, which the OAuth token exchange needs. A response is
+        untrusted whichever verb produced it: reading a mailbox is the most hostile input the
+        system takes, and it arrives through here like everything else.
 
         Raises:
             AllowlistViolation: if the host is not permitted.
             InjectionAttempt: if the response tries to issue instructions.
         """
         host = self.check(url)
-        body = self._transport(url, timeout)
+        body = self._transport(url, timeout, headers=headers, data=data)
         return wrap_untrusted(body.decode("utf-8", errors="replace"), source=host)
+
+    def post_form(
+        self,
+        url: str,
+        fields: Mapping[str, str],
+        timeout: float = DEFAULT_TIMEOUT,
+    ) -> UntrustedText:
+        """Post `fields` as a urlencoded form and return the response.
+
+        Raises:
+            AllowlistViolation: if the host is not permitted.
+        """
+        return self.fetch(
+            url,
+            timeout,
+            headers={"Content-Type": "application/x-www-form-urlencoded"},
+            data=urllib.parse.urlencode(dict(fields)).encode(),
+        )
 
 
 default_fetcher = Fetcher()

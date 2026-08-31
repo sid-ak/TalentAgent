@@ -12,8 +12,9 @@ experiment loop over your outcomes.
 
 That is the design. What runs today is the third of those: a single agent loop that composes
 credited applications from evidence you supply, asks you a question wherever the evidence runs out,
-and fills an employer's form without being able to submit it. The inbox pipeline and the analyst
-loop are [Phase 3](TalentAgent-Plan.md). The
+and fills an employer's form without being able to submit it. It also reads the replies an
+application gets and derives where it stands. The autonomous inbox pipeline and the analyst loop
+were never built; [the plan](TalentAgent-Plan.md) records what they would involve. The
 [Phase 2.5 explanation](explanations/phase-2.5-demo.md) describes what exists in plain English.
 
 The system acts on its own for preparation, tracking, and analysis. It never takes an action that

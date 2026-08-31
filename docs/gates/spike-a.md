@@ -69,12 +69,14 @@ Running it: dispatch the `form-worker` workflow with a real posting URL on each 
 fills the form, captures it, and halts. A human then reviews the capture and, if they choose to
 apply, submits it themselves — the worker has no code path that could.
 
-It is carried out in Phase 3 rather than Phase 1, as
-[#18](https://github.com/sid-ak/TalentAgent/issues/18). Phase 3 builds the `workflow_dispatch`
-bridge from the review UI to the form worker, so the runs go through the same path a user would use
-rather than a one-off dispatch, and the Definition of Done run records the artifacts as its evidence
-for the first pillar claim. Phase 1 closed on what it could settle in CI; this gate stays open until
-the runs exist.
+It was deferred out of Phase 1 as
+[#18](https://github.com/sid-ak/TalentAgent/issues/18) and never carried out. The plan put it behind
+the `workflow_dispatch` bridge from the review surface to the form worker, so the runs would go
+through the same path a user would rather than a one-off dispatch; that bridge was not built either.
+
+So this criterion is unmet, and stays unmet. Phase 1 closed on what it could settle in CI, and the
+fixture completion figures below are what the gate actually establishes — a live page has never been
+filled. Saying so is the point of a gate record.
 
 When those three artifacts exist, record their run identifiers here, note the deterministic share
 alongside the completion figure — a live page filling mostly by fallback means the map has drifted

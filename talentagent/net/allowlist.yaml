@@ -16,6 +16,12 @@ ats:
 evidence:
   - api.github.com
 
+mail:
+  # Reading the user's own mailbox, read-only, on a token the user grants and can revoke.
+  # Nothing here is ever written to: there is no send scope and no send path (G3, G6).
+  - gmail.googleapis.com
+  - oauth2.googleapis.com
+
 eligibility:
   # Public structured filing datasets (Spec 6.2). Populated by issue #40.
   - www.dol.gov

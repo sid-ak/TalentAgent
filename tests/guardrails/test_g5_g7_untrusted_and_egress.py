@@ -1,5 +1,7 @@
 """G5: no prohibited automation. G7: untrusted content is data, never instruction."""
 
+from collections.abc import Mapping
+
 import pytest
 from talentagent.net.fetch import AllowlistViolation, Fetcher, Transport, load_allowlist
 from talentagent.net.untrusted import InjectionAttempt, scan_for_injection, wrap_untrusted
@@ -14,7 +16,13 @@ PROHIBITED = ("www.linkedin.com", "www.indeed.com", "www.glassdoor.com")
 def _fixed(body: str) -> Transport:
     """Return a transport answering with `body`, so the guardrail is tested without a network."""
 
-    def transport(_url: str, _timeout: float) -> bytes:
+    def transport(
+        _url: str,
+        _timeout: float,
+        *,
+        headers: Mapping[str, str] | None = None,
+        data: bytes | None = None,
+    ) -> bytes:
         return body.encode()
 
     return transport
