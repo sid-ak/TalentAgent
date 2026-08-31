@@ -132,12 +132,21 @@ So one criterion is genuinely outstanding: one clean run against a real live pos
 platform. Until those exist, the honest statement is that the approach works and has not yet met
 reality. The gate record says so rather than reporting a pass.
 
+Those runs need a person at a real employer's page rather than a test that can be run on demand, so
+they happen in Phase 5, alongside the button in the review screen that a user would press to start
+one. Doing them there means they go through exactly the path a real application takes.
+
 ## What was also built along the way
 
 Phase 1 cannot run on nothing, so the parts of Phase 0 it depended on were built first: the project
 scaffold and its lint rules, continuous integration, the two-tier AI client with recorded responses,
 the tool registry that makes submission unreachable, the network wrapper that restricts which sites
 can be contacted at all, and the twelve test forms.
+
+The rest of Phase 0 was sample data — an email corpus, two example profiles, a set of past
+application outcomes — and a database layer. Each of those is read by exactly one later phase and by
+nothing before it, so rather than being held up front they now sit at the start of the phase that
+uses them. Nothing was dropped; it moved to where it is first needed.
 
 Two of those are worth calling out.
 

@@ -69,4 +69,13 @@ Running it: dispatch the `form-worker` workflow with a real posting URL on each 
 fills the form, captures it, and halts. A human then reviews the capture and, if they choose to
 apply, submits it themselves — the worker has no code path that could.
 
-When those three artifacts exist, record their run identifiers here and mark the criterion met.
+It is carried out in Phase 5 rather than Phase 1, as
+[#18](https://github.com/sid-ak/TalentAgent/issues/18). Phase 5 builds the `workflow_dispatch`
+bridge from the review UI to the form worker, so the runs go through the same path a user would use
+rather than a one-off dispatch, and the Definition of Done run records the artifacts as its evidence
+for the first pillar claim. Phase 1 closed on what it could settle in CI; this gate stays open until
+the runs exist.
+
+When those three artifacts exist, record their run identifiers here, note the deterministic share
+alongside the completion figure — a live page filling mostly by fallback means the map has drifted
+from the real DOM even where completion holds — and mark the criterion met.

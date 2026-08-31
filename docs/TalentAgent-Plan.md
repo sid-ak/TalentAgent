@@ -39,9 +39,16 @@ this order:
 - R2 — generation fabricates where evidence is absent. Phase 2. This is the guarantee the product
   is built on, so it is proven before anything is layered on top of it.
 
-Everything in Phase 0 is a precondition. No agent work begins until the fixtures exist (Spec §13.2),
-because a system whose tests hit live models and live forms is neither deterministic nor affordable
-under the quota ceiling in [ADR-0012](./ADRs/0012-zero-budget-constraint.md).
+Everything in Phase 0 is a precondition. No agent work begins until the fixtures that agent is
+measured against exist (Spec §13.2), because a system whose tests hit live models and live forms is
+neither deterministic nor affordable under the quota ceiling in
+[ADR-0012](./ADRs/0012-zero-budget-constraint.md).
+
+What that rule requires is that a corpus precedes its consumer, not that every corpus precedes
+everything. Phase 0 therefore carries the tooling, the guardrail harness, the offline model client,
+and the ATS forms Phase 1 fills. The mail corpus, the two evidence profiles, and the outcome
+backfill each sit at the head of the single phase that reads them — a corpus held in Phase 0 that
+nothing is yet waiting for turns a precondition into a delay.
 
 | Phase | Milestone | Epic | Spike | Risks retired |
 |---|---|---|---|---|
@@ -71,28 +78,27 @@ Scope
 
 - Python package layout, tooling, lint gates, and docstring enforcement.
 - CI on GitHub Actions: lint, type check, test, and an assertion that the suite reached no network.
-- Firestore collections, security rules, and an emulator harness. The `outcomes` collection is
-  append-only by rule; the single-writer invariant is expressed as rules keyed to a component claim
-  (Architecture §5.1).
 - A model client with tier-1 and tier-2 routing, and a record-and-replay layer that turns recorded
   responses into golden fixtures.
 - The tool registry with side-effect classes (Spec Appendix C), and the guardrail suite asserting
   G1 through G7.
 - A fetch wrapper enforcing the permitted-domain allowlist (G5) and treating third-party text as
   data (G7).
-- Fixtures: ATS forms for all three platforms, a labelled mail corpus, an artifact-backed evidence
-  seed, a profile with no public artifacts, and an outcome backfill.
+- ATS form fixtures for all three platforms: the corpus Phase 1 fills against.
 
 Exit criteria
 
 - `mkdocs build --strict` and the full test suite are green in CI.
 - The test suite makes zero model API calls, asserted rather than assumed.
-- `outcomes` is proven append-only: update and delete are denied by rule, asserted against the
-  emulator.
 - `submit_application` is unreachable from every agent path, asserted in a test.
-- Every fixture in Spec §13.2 exists and is anonymised.
 
 Blocks every other phase.
+
+Four items first written here are owned by later phases, each by the one phase that reads it: the
+Firestore collections and rules and the two evidence profiles by Phase 2, the mail corpus by
+Phase 3, and the outcome backfill by Phase 4. The exit criterion that `outcomes` is provably
+append-only travels with the rules to Phase 2, and Spec §13.2's requirement that every fixture
+exists and is anonymised is now met corpus by corpus rather than all at once.
 
 ---
 
@@ -121,6 +127,12 @@ Exit criteria (Spike A)
 - One clean end-to-end run against a live posting, per platform.
 - Zero submissions from any non-human path, asserted in tests.
 
+The first and third are settled in this phase, on fixtures and in CI. The live runs need a person at
+a real employer's page, so they are executed in Phase 5 through the same dispatch bridge a user
+would use, and the gate document reports the criterion as outstanding until they exist rather than
+reporting a pass. What Phase 1 establishes is that the approach works and which platforms survive;
+what the live runs add is that the maps hold against a real DOM.
+
 ---
 
 ## 4. Phase 2: Evidence graph and credited composition
@@ -130,6 +142,13 @@ nothing supports a requirement the system reports a gap instead of writing aroun
 
 Scope
 
+- The Firestore collections, the security rules implementing the write-ownership table, and the
+  emulator harness. `outcomes` is append-only by rule; the single-writer invariant is expressed as
+  rules keyed to a component claim (Architecture §5.1). This is the first phase writing durable
+  documents a later phase reads back, and the typed models it defines are shared by every writer
+  after it.
+- The two evidence profiles: one real repository ingested into artifacts, and a second profile built
+  entirely from elicited statements with no public artifacts at all.
 - The evidence graph: node and edge types, and the invariants in Spec §3.4.
 - Attestation classes, and the quarantine that keeps `derived` nodes out of composition
   ([ADR-0002](./ADRs/0002-graded-attestation-classes.md)).
@@ -144,6 +163,8 @@ Scope
 
 Exit criteria (Spike B)
 
+- `outcomes` is proven append-only: update and delete are denied by rule, asserted against the
+  emulator.
 - 100% credit coverage, reported split by class.
 - Zero `derived` leakage into any package.
 - An adversarial posting yields gaps and questions rather than inventions.
@@ -158,6 +179,8 @@ action, and silence is detected as its own signal.
 
 Scope
 
+- The labelled mail corpus and its anonymisation pipeline: roughly 150 real messages, each carrying
+  all three labels, with a held-out split so the corpus can measure rather than only fit.
 - The Apps Script project, `clasp` deployment, and time-driven triggers on the adaptive cadence:
   hourly on weekday working hours, every six hours otherwise.
 - The `lastHistoryId` cursor and per-message idempotency keys.
@@ -185,6 +208,10 @@ next hypothesis.
 
 Scope
 
+- The outcome backfill: historical applications with known results, spanning every segment the
+  analyst reads and including one segment with zero replies, so `INSUFFICIENT_EVIDENCE` has
+  something real to render and the loop can be measured before the pipeline has produced months of
+  live rows.
 - The eligibility corpus, ingested from one public structured filing dataset, aggregated and
   recency-weighted, with conflicting signals surfaced individually rather than averaged.
 - `score_eligibility` — the only score permitted to gate.
@@ -223,6 +250,8 @@ Scope
 - Elicitation answering, and promotion of the user's raw answer into a Statement node.
 - Firebase Auth, Firebase Hosting deployment, and the `workflow_dispatch` bridge from the UI to the
   form worker.
+- The outstanding Spike A criterion: one clean end-to-end run against a live posting per platform,
+  dispatched through that bridge, with the artifact retained as the evidence.
 - Measurement: the metrics in Spec §12 collected and reported, including tier-down rate and daily
   quota consumption.
 - Deployment verified from a clean project, with a runbook covering trigger installation and
@@ -255,7 +284,8 @@ verifies the whole list rather than re-deriving it.
 
 | Definition of Done item | Owning phase |
 |---|---|
-| Three platforms fill at ≥90% on fixtures, one clean live run each | 1 |
+| Three platforms fill at ≥90% on fixtures | 1 |
+| One clean live run per platform | 5 |
 | 100% credit coverage, split by attestation class | 2 |
 | Zero `derived` claims reach a package | 2 |
 | Adversarial posting produces gaps, not fabrications | 2 |
@@ -265,9 +295,9 @@ verifies the whole list rather than re-deriving it.
 | Only eligibility can exclude | 4 |
 | Exploration budget honoured and visible in the outcome log | 4 |
 | Inbound path on the adaptive schedule, batched triage, idempotency tests | 3 |
-| Tier-down rate measured; quota consumption inside free-tier ceilings | 0, 5 |
+| Tier-down rate measured; quota consumption inside free-tier ceilings | 3, 5 |
 | Test suite makes zero model API calls | 0 |
-| `outcomes` proven append-only | 0 |
+| `outcomes` proven append-only | 2 |
 | `submit_application` unreachable from any agent path | 0, 1 |
 | Deploy verified from a clean project | 5 |
 | Architecture documented, including the asynchronous path | 5 |
