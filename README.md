@@ -1,29 +1,35 @@
 # TalentAgent
 
-An agent that writes job applications it can prove. For each requirement in a posting it searches
-what you have actually done, and either writes a line backed by that evidence or asks you a question
-— it has no path that lets it invent the difference. It fills the employer's form and stops, because
-pressing submit is yours.
+An agent that operates a job search as a long-running workflow. It reads a posting, decides which
+requirements your evidence can support, refuses the ones it cannot, fills the employer's form, and
+reads your inbox to work out where every application stands. Five steps, and only one of them is
+text.
 
 Built for the [All Things Agentic Hackathon](https://allthingsagentichackathon.devpost.com/),
-category: The Collaborative Partner.
+category: The Taskmaster.
 
 - Live: https://talentagent-482181354691.us-central1.run.app
 - Documentation: https://sid-ak.github.io/TalentAgent/
 
 ## The idea
 
-Most tools that write applications ask a model to write an application. It is given your resume and a
-posting and produces plausible sentences. Some are true, and you cannot tell which, because nothing
-in that arrangement separates a fact you supplied from one the model invented to fill a gap.
+A job search is not a writing problem. Producing an application takes ten minutes and always has.
 
-TalentAgent inverts it. The model never decides whether a line may be written — only how to phrase
-one already authorised. Authorisation is a number computed outside the model: for each requirement,
-search your evidence, score how well it is covered, compare to a threshold. Above it, the model is
-handed a small set of your own entries and asked to phrase one. Below it, there is nothing to phrase,
-and you get a question.
+The bottleneck is everything around it: forty applications in limbo with no idea which are alive, no
+memory of what you actually accomplished, no way to tell a bad resume from a bad channel from bad
+luck. It is a long-running, stateful workflow with a feedback signal too sparse for anyone to run by
+hand — which is why job searches fail slowly, around week six, when the tracker stops being updated.
 
-So the interesting output of a run is not the bullets. It is the questions.
+That is a chore to operate, not a question to answer.
+
+The load-bearing decision is where the model sits. It never decides whether a line may be written —
+only how to phrase one already authorised. Authorisation is a number computed outside the model: for
+each requirement, search your evidence, score the coverage, compare to a threshold. Above it, the
+model is handed a small set of your own entries and asked to phrase one. Below it, there is nothing
+to phrase, and the agent routes a question back to you.
+
+So the interesting output of a run is not the bullets. It is the questions — and the fact that your
+answer enters the graph verbatim, so the next application starts from more than this one did.
 
 ## Architecture
 
@@ -62,6 +68,20 @@ The load-bearing detail is that `retrieval.py` sits between the posting and the 
 asked to phrase evidence that retrieval already approved; it is never asked whether the evidence is
 sufficient. That decision is arithmetic, and it is why the system can refuse.
 
+## The five steps
+
+1. Ground truth. Upload your resume and it is split into the accomplishments it claims, copied word
+   for word — anything not found verbatim in the file is discarded rather than added. You can write
+   entries by hand too.
+2. It decides. Give it a posting by URL or text. Gemini Flash-Lite separates requirements from
+   perks; retrieval and a threshold decide, outside the model, which of them your evidence supports.
+   Gemini Flash phrases only those. The rest become questions.
+3. It compounds. Your answer to a gap enters the evidence graph verbatim and is available to every
+   future application. The system accumulates what is true about you rather than rewriting it.
+4. It acts. The composed package is filled onto a real Greenhouse, Lever, or Ashby form, and stops.
+5. It tracks. It reads your Gmail read-only, classifies each reply in one batched call, and derives
+   application state through a transition table the model cannot reach.
+
 ## Quickstart
 
 Requires Python 3.12+ and a [Gemini API key](https://aistudio.google.com/apikey).
@@ -73,8 +93,10 @@ Requires Python 3.12+ and a [Gemini API key](https://aistudio.google.com/apikey)
 4. `uv run python scripts/serve_demo.py`: start the server on http://127.0.0.1:8080.
 5. Open http://127.0.0.1:8080 and, in order: write a line or two about what you have done, paste a
    job posting, then run the agent.
-6. Optionally, fill the employer's form from the result, and paste in the replies an application
-   got to see where it stands.
+6. Upload a resume, or paste a Greenhouse, Lever, or Ashby posting URL instead of its text. Other
+   hosts are refused by name rather than attempted, including the aggregators whose terms prohibit
+   automated access.
+7. Fill the employer's form from the result, and read your inbox to see where things stand.
 
 Without a key the server still runs: composition falls back to your own wording used as-is, and the
 trace says so rather than pretending.
@@ -91,29 +113,65 @@ trace says so rather than pretending.
 1. `docker build -t talentagent .`: build the image.
 2. `docker run -p 8080:8080 -e HOST=0.0.0.0 -e GEMINI_API_KEY=your-key talentagent`: serve it.
 
-### Connect Gmail (optional)
+### Connect Gmail
 
-Without this the surface falls back to pasting replies in. With it, it reads your mailbox directly.
+Step 5 reads your mailbox. Without this the surface falls back to pasting replies into a box, and
+says so; with it, the paste box disappears on its own.
 
-1. In the Google Cloud console, configure the OAuth consent screen as External, keep it in Testing,
-   add yourself as a test user, and add the `.../auth/gmail.readonly` scope.
-2. Create an OAuth client ID of type Desktop app, and note the client ID and secret.
-3. `python3 scripts/gmail_auth.py --client-id ... --client-secret ...`: opens Google's consent
-   screen and prints a refresh token. This is deliberately a human-run step — nothing in the
-   running system can obtain a token for itself.
-4. Put `GMAIL_CLIENT_ID`, `GMAIL_CLIENT_SECRET`, and `GMAIL_REFRESH_TOKEN` in `.env`, or set them
-   on Cloud Run with `--set-env-vars`.
+The scope is `gmail.readonly` and nothing else, so no token this system holds can send mail. Nothing
+in the running system can obtain a token either — step 3 is deliberately a command you run, at a
+consent screen you see, for access you can revoke.
+
+1. `gcloud services enable gmail.googleapis.com`: turn the API on for your project.
+2. In the Google Cloud console, under APIs and services:
+    1. OAuth consent screen: User type External, keep publishing status Testing, and add your own
+       Google account under Test users. Add the `.../auth/gmail.readonly` scope.
+    2. Credentials, Create credentials, OAuth client ID, Application type Desktop app. Note the
+       client ID and secret. Desktop app matters — it is what permits the `localhost` redirect the
+       next step listens on.
+3. `python3 scripts/gmail_auth.py --client-id YOUR_ID --client-secret YOUR_SECRET`: opens the
+   consent screen and prints a refresh token. It is standard library only, so no virtualenv is
+   needed. You will have to click past an "unverified app" warning, which is what Testing mode
+   means.
+4. Put all three in `.env`:
+
+    ```
+    GMAIL_CLIENT_ID=...
+    GMAIL_CLIENT_SECRET=...
+    GMAIL_REFRESH_TOKEN=...
+    ```
+
+5. Restart the server, or redeploy with the variables set (see below). `GET /api/status` reports
+   `gmail_connected`, which is how you tell it worked.
+
+Two limits worth knowing. In Testing mode Google expires refresh tokens after seven days, so this
+stops working after a week until you re-run step 3. And a refresh token is bound to the client that
+issued it: mixing a token from one OAuth client with another client's ID returns `invalid_grant`.
 
 ### Deploy to Cloud Run
 
 Requires the `gcloud` CLI, a project with billing enabled, and
 `gcloud services enable run.googleapis.com cloudbuild.googleapis.com artifactregistry.googleapis.com`.
 
-1. `gcloud run deploy talentagent --source . --region us-central1 --allow-unauthenticated --max-instances 1 --timeout 300 --memory 1Gi --set-env-vars "GEMINI_API_KEY=$KEY"`: builds
-   remotely with Cloud Build and deploys. No local Docker needed.
+1. `gcloud run deploy talentagent --source . --region us-central1 --allow-unauthenticated --max-instances 1 --timeout 300 --memory 1Gi --set-env-vars "GEMINI_API_KEY=$GEMINI_API_KEY"`:
+   builds remotely with Cloud Build and deploys. No local Docker needed.
+2. To include Gmail, pass all four. `--set-env-vars` splits on commas, which OAuth values can
+   contain, so set a different delimiter with the `^@^` prefix:
+
+    ```
+    --set-env-vars "^@^GEMINI_API_KEY=$GEMINI_API_KEY@GMAIL_CLIENT_ID=$GMAIL_CLIENT_ID@GMAIL_CLIENT_SECRET=$GMAIL_CLIENT_SECRET@GMAIL_REFRESH_TOKEN=$GMAIL_REFRESH_TOKEN"
+    ```
+
+    Sourcing `.env` first (`set -a; . ./.env; set +a`) keeps the values off your command line and
+    out of your shell history.
 
 `--max-instances 1` because the candidate session is a process-wide singleton; a second instance
 would split the state. `--timeout 300` because one run is up to nine sequential model calls.
+
+A first deploy on a fresh project fails with a 403 on `storage.objects.get`: the default compute
+service account cannot read Cloud Build's source bucket until it is granted
+`roles/cloudbuild.builds.builder`, `roles/storage.objectViewer`, `roles/logging.logWriter`, and
+`roles/artifactregistry.writer`.
 
 ## How the hackathon requirements are met
 
@@ -121,7 +179,7 @@ would split the state. `--timeout 300` because one run is up to nine sequential 
 |---|---|
 | Gemini 3.5 or newer | `gemini-3.5-flash-lite` and `gemini-3.6-flash`, in `talentagent/models/live.py` |
 | A Google agent framework | `google-genai` (GenAI SDK), the only model transport |
-| A Google Cloud service | Cloud Run, deployed from the `Dockerfile` in this repo |
+| A Google Cloud service | Cloud Run, deployed from the `Dockerfile` in this repo; Gmail API for step 5 |
 | Spin-up instructions | Quickstart above |
 | Architecture diagram | Above |
 
