@@ -58,7 +58,79 @@ _KNOWN_SKILL_KEYWORDS: dict[str, str] = {
     "golang": "skill_go",
     "aws": "skill_aws",
     "gcp": "skill_gcp",
+    "azure": "skill_azure",
+    "sql": "skill_sql",
+    "c#": "skill_csharp",
+    "csharp": "skill_csharp",
+    ".net": "skill_dotnet",
+    "dotnet": "skill_dotnet",
+    "javascript": "skill_javascript",
+    "typescript": "skill_typescript",
+    "angular": "skill_angular",
+    "react": "skill_react",
+    "node": "skill_node",
+    "nodejs": "skill_node",
+    "docker": "skill_docker",
+    "java": "skill_java",
+    "api": "skill_api",
+    "rest": "skill_api",
+    "graphql": "skill_graphql",
+    "agile": "skill_agile",
+    "data analysis": "skill_data_analysis",
 }
+
+
+def extract_posting_requirements(content: str) -> list[str]:
+    """Extract clean, discrete requirement strings from a job posting HTML or plain text.
+
+    Strips DOM markup, scripts, and navigation boilerplate, returning candidate qualifications.
+    """
+    if "<html" in content.lower() or "<body" in content.lower() or "<div" in content.lower():
+        try:
+            import lxml.html as lxml_html
+
+            tree = lxml_html.fromstring(content)
+            elements = tree.xpath("//script | //style | //noscript | //header | //footer | //nav")
+            if isinstance(elements, list):
+                for elem in elements:
+                    if isinstance(elem, lxml_html.HtmlElement) and elem.getparent() is not None:
+                        elem.getparent().remove(elem)
+
+            # Look for structured list items in the job description
+            requirements: list[str] = []
+            lis = tree.xpath("//li")
+            if isinstance(lis, list):
+                for li in lis:
+                    if isinstance(li, lxml_html.HtmlElement):
+                        text = " ".join(li.text_content().split())
+                        if len(text) > 15:
+                            requirements.append(text)
+
+            if requirements:
+                return requirements
+
+            # Fallback to substantive paragraphs
+            ps = tree.xpath("//p")
+            if isinstance(ps, list):
+                for p in ps:
+                    if isinstance(p, lxml_html.HtmlElement):
+                        text = " ".join(p.text_content().split())
+                        if len(text) > 25 and not text.startswith("©"):
+                            requirements.append(text)
+
+            if requirements:
+                return requirements
+        except Exception:
+            pass
+
+    # Plain text line splitting
+    lines = [line.strip() for line in content.splitlines() if len(line.strip()) > 15]
+    clean_lines: list[str] = []
+    for line in lines:
+        cleaned = re.sub(r"^[•\-\*\d\.]+\s*", "", line)
+        if len(cleaned) > 15 and not cleaned.startswith("<"):
+            clean_lines.append(cleaned)
+    return clean_lines
 
 
 def normalise_requirement(

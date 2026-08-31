@@ -11,6 +11,7 @@ from talentagent.evidence.retrieval import (
     DEFAULT_SUFFICIENCY_THRESHOLD,
     NormalizedRequirement,
     calculate_sufficiency,
+    extract_posting_requirements,
     normalise_requirement,
     query_evidence,
 )
@@ -76,3 +77,34 @@ def test_derived_nodes_excluded_from_retrieval(store_a: LocalEvidenceStore) -> N
 
     assert not any(c.id == "acc_model_py" for c in res.candidates)
     assert not any(c.attestation_class == AttestationClass.DERIVED for c in res.candidates)
+
+
+def test_extract_posting_requirements_from_html_and_text() -> None:
+    """Requirement extractor strips HTML markup and extracts discrete qualification bullets."""
+    sample_html = """
+    <html>
+      <head><title>Job Title</title><script>var x = 1;</script></head>
+      <body>
+        <main>
+          <h1>Senior Software Engineer</h1>
+          <ul>
+            <li>5+ years of experience with Python and distributed systems</li>
+            <li>Hands-on experience with SQL database optimization</li>
+          </ul>
+        </main>
+      </body>
+    </html>
+    """
+    reqs = extract_posting_requirements(sample_html)
+    assert len(reqs) == 2
+    assert "5+ years of experience with Python and distributed systems" in reqs
+    assert "Hands-on experience with SQL database optimization" in reqs
+
+    # Plain text
+    sample_text = """
+    - 5+ years of experience with Kubernetes
+    - Experience in microservices architecture
+    """
+    reqs_text = extract_posting_requirements(sample_text)
+    assert len(reqs_text) == 2
+    assert "5+ years of experience with Kubernetes" in reqs_text

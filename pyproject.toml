@@ -13,6 +13,8 @@ dependencies = [
     "pydantic>=2.9",
     "pyyaml>=6.0",
     "lxml>=5.3",
+    "pypdf>=4.0",
+    "google-genai>=0.1.1",
 ]
 
 [project.optional-dependencies]
@@ -64,6 +66,7 @@ ignore = [
 "talentagent/net/fetch.py" = ["TID251"]
 # Loopback REST calls to the local Firestore emulator (Issue #4). Not an outbound read, so G5 does not apply.
 "tests/firestore/emulator.py" = ["TID251"]
+"scripts/**" = ["ALL"]
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"
