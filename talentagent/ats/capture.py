@@ -25,7 +25,7 @@ from talentagent.ats.completion import Completion
 from talentagent.ats.executor import FillResult
 from talentagent.ats.fallback import BoundedFallback
 from talentagent.ats.package import ApplicationPackage
-from talentagent.ats.page import Page
+from talentagent.ats.page import FALLBACK_SOURCE, Page
 
 SCREENSHOT = "form.png"
 """Filenames inside a capture directory. Fixed so the review UI can find them without a manifest."""
@@ -108,7 +108,7 @@ def build_capture(
 ) -> RunCapture:
     """Assemble the per-field record from a fill result."""
     written = {value.name: value for value in result.log.values}
-    fallback_names = {name for name, value in written.items() if value.source == "fallback"}
+    fallback_names = {name for name, value in written.items() if value.source == FALLBACK_SOURCE}
     rejected = dict(result.rejected_answers)
 
     records: list[FieldRecord] = []
@@ -116,7 +116,7 @@ def build_capture(
         records.append(
             FieldRecord(
                 name=name,
-                outcome="fallback" if name in fallback_names else "resolved",
+                outcome=FALLBACK_SOURCE if name in fallback_names else "resolved",
                 detail=value.source,
                 value=value.value,
             )

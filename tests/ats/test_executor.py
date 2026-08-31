@@ -63,25 +63,25 @@ def test_the_loop_stops_when_a_pass_reveals_nothing_new(package: ApplicationPack
 
 
 def test_a_dom_change_on_a_mapped_field_halts_with_a_partial_fill(
-    package: ApplicationPackage, tmp_path: Path
+    package: ApplicationPackage, changed_form: Path
 ) -> None:
-    """When the page rejects a value the map resolved, the run stops rather than guessing on."""
-    source = ATS_FIXTURES / "greenhouse" / "plain.html"
-    # The platform has turned a free-text field into a constrained select, which is exactly the
-    # kind of change ADR-0008 expects a map to notice rather than work around.
-    changed = tmp_path / "plain.html"
-    changed.write_text(
-        source.read_text().replace(
-            '<input type="email" id="email" name="job_application[email]" required>',
-            '<select id="email" name="job_application[email]">'
-            '<option value="a@example.com">a</option></select>',
-        )
-    )
-    page = OfflineHtmlPage(changed)
+    """When the page rejects a value the map resolved, the run stops rather than guessing on.
+
+    The halt carries the fill as it stood, so the run is recorded at the completion it actually
+    reached: an empty figure would read as a form with nothing left to fill.
+    """
+    page = OfflineHtmlPage(changed_form)
     with pytest.raises(FormHalted) as caught:
         fill_form(page, load_map("greenhouse"), package)
     assert caught.value.field_name == "job_application[email]"
     assert page.values, "a partial fill survives the halt"
+
+    partial = caught.value.partial_fill()
+    assert partial.halted is not None
+    assert partial.completion.rate < 1.0, "a run that stopped is not a complete one"
+    assert partial.completion.unfilled >= 1
+    assert partial.log.values, "what was filled before the halt is kept"
+    assert "job_application[email]" in {m.name for m in partial.outstanding}
 
 
 @pytest.mark.parametrize("platform", PLATFORMS)
@@ -147,3 +147,26 @@ def test_a_fallback_reaching_beyond_what_it_was_offered_halts(
 
     with pytest.raises(FormHalted, match="not offered"):
         fill_form(page, load_map("greenhouse"), package, answer_unmatched=overreach)
+
+
+def test_a_question_the_fallback_cannot_answer_is_asked_once_per_run(
+    package: ApplicationPackage,
+) -> None:
+    """A rejected answer is not re-offered on the next pass, which would spend quota twice."""
+    page = OfflineHtmlPage(ATS_FIXTURES / "greenhouse" / "conditional.html")
+    offered: list[str] = []
+
+    def decline_everything(pending: tuple[Missed, ...]) -> dict[str, str]:
+        """Take every question and answer none, as a low-confidence run would."""
+        offered.extend(m.name for m in pending)
+        return {}
+
+    result = fill_form(page, load_map("greenhouse"), package, answer_unmatched=decline_everything)
+    assert result.passes >= 2, "the map writes on the first pass, so the loop runs again"
+    assert len(offered) == len(set(offered)), f"a question was asked more than once: {offered}"
+
+
+def test_a_halt_raised_outside_a_fill_carries_nothing_and_says_so() -> None:
+    """The post-run navigation check halts with no fill behind it, and must not invent a figure."""
+    with pytest.raises(RuntimeError, match="no partial fill"):
+        FormHalted("the page navigated away, which suggests a submission (G3)").partial_fill()

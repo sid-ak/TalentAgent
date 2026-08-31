@@ -112,22 +112,17 @@ def test_an_exhausted_quota_degrades_rather_than_failing_silently(
 
 
 def test_a_dom_change_leaves_a_retrievable_artifact(
-    store: LocalPackageStore, tmp_path: Path
+    store: LocalPackageStore, changed_form: Path, tmp_path: Path
 ) -> None:
-    """A halt still produces an artifact naming the field, rather than losing the run."""
-    source = ATS_FIXTURES / "greenhouse" / "plain.html"
-    changed = tmp_path / "plain.html"
-    changed.write_text(
-        source.read_text().replace(
-            '<input type="email" id="email" name="job_application[email]" required>',
-            '<select id="email" name="job_application[email]">'
-            '<option value="a@example.com">a</option></select>',
-        )
-    )
+    """A halt produces an artifact naming the field, at the completion it actually reached.
+
+    Recording a halt as complete would be the same failure the Spike A figure was fixed for, on
+    the one path where nobody would look for it.
+    """
     outcome = run(
         application_id="app_1",
         posting_url="https://boards.greenhouse.io/acme/jobs/1",
-        page=OfflineHtmlPage(changed),
+        page=OfflineHtmlPage(changed_form),
         store=store,
         client=_client(tmp_path),
         artifacts=tmp_path / "artifacts",
@@ -136,6 +131,12 @@ def test_a_dom_change_leaves_a_retrievable_artifact(
     record = json.loads((outcome.artifact_dir / "run.json").read_text())
     assert record["halted"] is not None
     assert "job_application[email]" in record["halted"]
+
+    assert outcome.capture.completion.rate < 1.0
+    assert json.loads((store.root / "app_1.capture.json").read_text())["completion"] < 1.0
+    named = {field["name"]: field["outcome"] for field in record["fields"]}
+    assert named["job_application[email]"] == "unfilled", "the field it stopped on is named"
+    assert "resolved" in named.values(), "the partial fill is in the capture too"
 
 
 def test_the_workflow_reads_no_secret_from_the_tree() -> None:
@@ -171,3 +172,32 @@ def test_no_workflow_step_submits_anything() -> None:
         for step in workflow["jobs"]["fill"]["steps"]
     ).lower()
     assert "submit" not in commands
+
+
+def test_a_question_no_recording_covers_degrades_rather_than_crashing(
+    store: LocalPackageStore, tmp_path: Path
+) -> None:
+    """With no live transport wired yet (issue #18), a novel question leaves an artifact."""
+    client = ModelClient(golden_root=tmp_path / "golden")
+    outcome = run(
+        application_id="app_1",
+        posting_url="https://boards.greenhouse.io/acme/jobs/1",
+        page=OfflineHtmlPage(ATS_FIXTURES / "greenhouse" / "custom-questions.html"),
+        store=store,
+        client=client,
+        artifacts=tmp_path / "artifacts",
+        offline=True,
+    )
+    assert outcome.degraded is not None
+    assert outcome.capture.halted is None, "a missing recording degrades rather than halting"
+    assert outcome.capture.completion.by_map > 0, "the deterministic fill still ran"
+    assert (outcome.artifact_dir / "run.json").exists()
+
+
+def test_the_workflow_passes_dispatch_inputs_through_the_environment() -> None:
+    """Interpolating a caller's text into a step holding secrets is the injection pattern."""
+    workflow = yaml.safe_load(WORKFLOW.read_text())
+    fill = next(step for step in workflow["jobs"]["fill"]["steps"] if step.get("id") == "fill")
+    assert "inputs." not in fill["run"], "dispatch inputs reach the shell as variables"
+    assert fill["env"]["APPLICATION_ID"] == "${{ inputs.application_id }}"
+    assert fill["env"]["POSTING_URL"] == "${{ inputs.posting_url }}"

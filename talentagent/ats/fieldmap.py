@@ -61,6 +61,12 @@ class MissReason(enum.Enum):
     """A rule matched and named a package path, but the package has nothing there."""
     NOT_VISIBLE = "not_visible"
     """A rule matched a field that is present in the DOM but not currently visible."""
+    NOT_WRITTEN = "not_written"
+    """A rule matched and produced a value, but the field does not hold it: either the page refused
+    it and the run halted there, or the run ended before reaching it. Never produced by the
+    resolver — the executor records it against the form as it finally stands, so a halted run's
+    capture names the field that has no value in it.
+    """
 
 
 class FieldMapError(ValueError):

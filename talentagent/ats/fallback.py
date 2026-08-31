@@ -26,6 +26,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
+from talentagent.ats.halt import HaltedRun
 from talentagent.ats.package import ApplicationPackage
 from talentagent.ats.resolver import Missed
 from talentagent.models.client import ModelClient
@@ -48,7 +49,7 @@ _PROMPT = (
 )
 
 
-class FallbackCapExceeded(RuntimeError):
+class FallbackCapExceeded(HaltedRun):
     """Raised when a run needs more fallback invocations than its cap allows."""
 
     def __init__(self, cap: int) -> None:

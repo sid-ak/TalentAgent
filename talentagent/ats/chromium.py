@@ -21,6 +21,7 @@ from types import TracebackType
 from typing import TYPE_CHECKING, Any
 
 from talentagent.ats.page import FormField
+from talentagent.ats.platforms import same_posting
 
 if TYPE_CHECKING:  # pragma: no cover - import only for annotations
     from playwright.sync_api import Browser, Playwright
@@ -31,7 +32,7 @@ SUBMIT_SELECTORS = (
     "input[type=submit]",
 )
 """Selectors that identify a form's submit control on the three target platforms. Used to assert
-the control was never activated, never to activate it.
+the control is still sitting there unpressed at the end of a run, never to press it.
 """
 
 STATE_TIMEOUT_MS = 10_000
@@ -70,12 +71,18 @@ class ChromiumPage:
             raise PlaywrightUnavailable from exc
 
         self._playwright = sync_playwright().start()
-        self._browser = self._playwright.chromium.launch(headless=self._headless)
-        # A fresh context per run is the whole of the session story: it holds no storage state, so
-        # nothing survives the run and there is nothing to leak.
-        context = self._browser.new_context(storage_state=None)
-        self._page = context.new_page()
-        self._page.goto(self.url, wait_until="domcontentloaded")
+        try:
+            self._browser = self._playwright.chromium.launch(headless=self._headless)
+            # A fresh context per run is the whole of the session story: it holds no storage state,
+            # so nothing survives the run and there is nothing to leak.
+            context = self._browser.new_context(storage_state=None)
+            self._page = context.new_page()
+            self._page.goto(self.url, wait_until="domcontentloaded")
+        except Exception:
+            # Python calls __exit__ only after __enter__ returns, so a failure part-way through
+            # would otherwise leave the browser process running for the rest of the job.
+            self._teardown()
+            raise
         return self
 
     def __exit__(
@@ -85,10 +92,17 @@ class ChromiumPage:
         tb: TracebackType | None,
     ) -> None:
         """Destroy the browser profile with the run."""
+        self._teardown()
+
+    def _teardown(self) -> None:
+        """Close whatever was opened, in the reverse order it was opened."""
         if self._browser is not None:
             self._browser.close()
+            self._browser = None
         if self._playwright is not None:
             self._playwright.stop()
+            self._playwright = None
+        self._page = None
 
     @property
     def _live(self) -> PlaywrightPage:
@@ -141,13 +155,16 @@ class ChromiumPage:
         return False
 
     def submit_control_is_untouched(self) -> bool:
-        """Report that the form was not submitted, by checking the page never navigated away.
+        """Report that the form was not submitted, from what the page itself shows.
 
-        Asserted at the end of every run. A form that submitted would have navigated to a
-        confirmation page, so the URL still matching the posting is the observable evidence.
+        Asserted at the end of every run, and two observations have to agree. The page is still the
+        posting: a submitted form navigates to a confirmation page, and a host redirect between two
+        hosts serving the same platform does not count as navigating away (`same_posting`). And the
+        submit control is still on the page, unpressed — a submitted form no longer offers one.
         """
-        current: str = self._live.url
-        return current.split("#")[0].rstrip("/") == self.url.split("#")[0].rstrip("/")
+        if not same_posting(self._live.url, self.url):
+            return False
+        return any(self._live.locator(selector).count() for selector in SUBMIT_SELECTORS)
 
 
 _ENUMERATE_JS = """

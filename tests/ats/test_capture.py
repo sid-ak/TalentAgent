@@ -5,8 +5,7 @@ from pathlib import Path
 
 import pytest
 from talentagent.ats.capture import FROZEN_PACKAGE, RECORD, build_capture, write_capture
-from talentagent.ats.completion import ZERO
-from talentagent.ats.executor import FillResult, FormHalted, fill_form
+from talentagent.ats.executor import FormHalted, fill_form
 from talentagent.ats.fallback import BoundedFallback
 from talentagent.ats.fieldmap import load_map
 from talentagent.ats.offline import OfflineHtmlPage
@@ -101,30 +100,18 @@ def test_the_completion_figure_is_written_into_the_record(
 
 
 def test_a_halted_run_still_produces_a_capture_naming_the_field(
-    package: ApplicationPackage, tmp_path: Path
+    package: ApplicationPackage, changed_form: Path, tmp_path: Path
 ) -> None:
     """A DOM change loses the run, not the evidence of what went wrong (Architecture 7)."""
-    source = ATS_FIXTURES / "greenhouse" / "plain.html"
-    changed = tmp_path / "plain.html"
-    changed.write_text(
-        source.read_text().replace(
-            '<input type="email" id="email" name="job_application[email]" required>',
-            '<select id="email" name="job_application[email]">'
-            '<option value="a@example.com">a</option></select>',
-        )
-    )
-    page = OfflineHtmlPage(changed)
+    page = OfflineHtmlPage(changed_form)
     with pytest.raises(FormHalted) as caught:
         fill_form(page, load_map("greenhouse"), package)
 
-    partial = build_capture("job_9a2", "greenhouse", _empty_result(), halted=str(caught.value))
+    partial = build_capture(
+        "job_9a2", "greenhouse", caught.value.partial_fill(), halted=str(caught.value)
+    )
     written = write_capture(tmp_path / "run", partial, page, package, offline=True)
     record = json.loads((written / RECORD).read_text())
     assert "job_application[email]" in record["halted"]
     assert (written / FROZEN_PACKAGE).exists()
     assert "Ada" in (written / "form.html").read_text(), "the partial fill survives"
-
-
-def _empty_result() -> FillResult:
-    """Return a fill result carrying nothing, as a halt before completion would leave."""
-    return FillResult(completion=ZERO)

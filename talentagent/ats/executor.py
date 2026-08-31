@@ -15,20 +15,21 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from talentagent.ats.completion import Completion, from_resolution
-from talentagent.ats.fieldmap import FieldMap
+from talentagent.ats.completion import Completion, from_fill
+from talentagent.ats.fieldmap import FieldMap, MissReason
+from talentagent.ats.halt import HaltedRun
 from talentagent.ats.package import ApplicationPackage
-from talentagent.ats.page import FillLog, FormField, Page
+from talentagent.ats.page import FALLBACK_SOURCE, FillLog, FormField, Page
 from talentagent.ats.resolver import Missed, resolve
 
 MAX_PASSES = 4
 """How many enumerate-and-fill passes to make before concluding the form has stopped changing.
-Three is comfortably above the deepest conditional chain the target platforms produce, and a
+Four is comfortably above the deepest conditional chain the target platforms produce, and a
 cap rather than a while-loop so a page that rewrites itself cannot spin.
 """
 
 
-class FormHalted(RuntimeError):
+class FormHalted(HaltedRun):
     """Raised when a run stops early with a partial fill.
 
     Halting is the designed response to a surprise. A DOM change means the map's assumptions no
@@ -80,6 +81,67 @@ def _write(page: Page, log: FillLog, form_field: FormField, value: str, source: 
     log.record(form_field.name, value, source)
 
 
+@dataclass
+class _Run:
+    """One fill in progress, and the single place a result is built from it.
+
+    Kept as a value rather than as loose locals so the halt path and the success path report the
+    form the same way. They differ only in whether a reason for stopping is attached.
+
+    Attributes:
+        log: Every value written, in order.
+        attempted: Fields already offered to the fallback, answered or not. Separate from what was
+            written, because a question the model could not answer must not be asked again on the
+            next pass — that spends quota on a known-unanswerable field and brings the per-run cap
+            forward for no gain (ADR-0008).
+        rejected: Fallback answers the control refused, with the reason.
+        passes: How many enumerate-and-fill passes have run.
+    """
+
+    log: FillLog = field(default_factory=FillLog)
+    attempted: set[str] = field(default_factory=set)
+    rejected: list[tuple[str, str]] = field(default_factory=list)
+    passes: int = 0
+
+    def result(
+        self,
+        page: Page,
+        field_map: FieldMap,
+        package: ApplicationPackage,
+        halted: str | None = None,
+    ) -> FillResult:
+        """Describe the form as it now stands, whether the run finished or stopped.
+
+        Re-resolves the page first, so every conditional field an answer revealed is counted.
+        """
+        final = resolve(page.fields(), field_map, package)
+        written = self.log.sources()
+        rejected_names = {name for name, _ in self.rejected}
+        # A field the map resolved but that holds no value is the halt's own field, or one the run
+        # never reached. It is not a miss the resolver can report, and leaving it out would hide
+        # the very field a reviewer opens the capture to find.
+        unwritten = tuple(
+            Missed(
+                item.field,
+                MissReason.NOT_WRITTEN,
+                f"resolved from {item.path}, but the value never reached the field",
+            )
+            for item in final.resolved
+            if item.name not in written
+        )
+        return FillResult(
+            completion=from_fill(final, written),
+            log=self.log,
+            outstanding=tuple(
+                m for m in final.missed if m.name not in written or m.name in rejected_names
+            )
+            + unwritten,
+            rejected_answers=tuple(self.rejected),
+            passes=self.passes,
+            halted=halted,
+        )
+
+
 def fill_form(
     page: Page,
     field_map: FieldMap,
@@ -100,33 +162,56 @@ def fill_form(
         A FillResult carrying the completion figure and everything that was written.
 
     Raises:
-        FormHalted: if a fill fails on a field the map resolved, which means the page is not what
-            the map expects.
+        HaltedRun: if a fill fails on a field the map resolved, which means the page is not what
+            the map expects, or if the fallback exhausts its per-run cap. Either way the partial
+            fill travels on the exception, so the run is recorded as it actually stands.
     """
-    log = FillLog()
-    filled: set[str] = set()
-    rejected: list[tuple[str, str]] = []
-    passes = 0
-    fallback_count = 0
+    run = _Run()
+    try:
+        _passes(page, field_map, package, run, answer_unmatched)
+    except HaltedRun as exc:
+        exc.partial = run.result(page, field_map, package, halted=str(exc))
+        raise
 
-    while passes < MAX_PASSES:
-        passes += 1
+    if page.submit_activated:  # pragma: no cover - unreachable by construction, asserted anyway
+        raise FormHalted("the submit control was activated, which must never happen (G3)")
+
+    return run.result(page, field_map, package)
+
+
+def _passes(
+    page: Page,
+    field_map: FieldMap,
+    package: ApplicationPackage,
+    run: _Run,
+    answer_unmatched: Callable[[tuple[Missed, ...]], dict[str, str]] | None,
+) -> None:
+    """Enumerate and fill until a pass writes nothing, recording what happened into `run`."""
+    while run.passes < MAX_PASSES:
+        run.passes += 1
         resolution = resolve(page.fields(), field_map, package)
+        written = run.log.sources()
         wrote_something = False
 
         for item in resolution.resolved:
-            if item.name in filled:
+            if item.name in written:
                 continue
             try:
-                _write(page, log, item.field, item.value, item.path)
+                _write(page, run.log, item.field, item.value, item.path)
             except (ValueError, KeyError) as exc:
                 raise FormHalted(f"the page rejected a mapped value: {exc}", item.name) from exc
-            filled.add(item.name)
             wrote_something = True
 
         if answer_unmatched is not None:
-            pending = tuple(m for m in resolution.fallback_candidates if m.name not in filled)
+            pending = tuple(
+                m
+                for m in resolution.fallback_candidates
+                if m.name not in written and m.name not in run.attempted
+            )
             offered = {m.name: m.field for m in pending}
+            # Recorded before the answers come back, so a question the model declined is asked
+            # once per run rather than once per pass.
+            run.attempted.update(offered)
             for name, value in answer_unmatched(pending).items():
                 if name not in offered:
                     raise FormHalted(
@@ -135,43 +220,14 @@ def fill_form(
                         name,
                     )
                 try:
-                    _write(page, log, offered[name], value, "fallback")
+                    _write(page, run.log, offered[name], value, FALLBACK_SOURCE)
                 except (ValueError, KeyError) as exc:
                     # A bad answer from the non-deterministic half is localised to its own field
                     # and left unfilled, rather than halting the fill (ADR-0008). It shows up as
                     # outstanding, so a reviewer sees the question that went unanswered.
-                    rejected.append((name, str(exc)))
-                    filled.add(name)
+                    run.rejected.append((name, str(exc)))
                     continue
-                filled.add(name)
-                fallback_count += 1
                 wrote_something = True
 
         if not wrote_something:
             break
-
-    # Re-resolve once more so the reported figure describes the form as it finally stands, with
-    # every conditional field that was revealed now counted.
-    final = resolve(page.fields(), field_map, package)
-    completion = from_resolution(final)
-    completion = Completion(
-        by_map=completion.by_map,
-        by_fallback=fallback_count,
-        unfilled=max(completion.unfilled - fallback_count, 0),
-        declined=completion.declined,
-        not_visible=completion.not_visible,
-    )
-
-    if page.submit_activated:  # pragma: no cover - unreachable by construction, asserted anyway
-        raise FormHalted("the submit control was activated, which must never happen (G3)")
-
-    rejected_names = {name for name, _ in rejected}
-    return FillResult(
-        completion=completion,
-        log=log,
-        outstanding=tuple(
-            m for m in final.missed if m.name not in filled or m.name in rejected_names
-        ),
-        rejected_answers=tuple(rejected),
-        passes=passes,
-    )

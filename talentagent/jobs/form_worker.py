@@ -14,38 +14,31 @@ import argparse
 import sys
 from dataclasses import dataclass
 from pathlib import Path
-from urllib.parse import urlparse
 
 from talentagent.ats.capture import RunCapture, build_capture, write_capture
-from talentagent.ats.completion import ZERO
 from talentagent.ats.executor import FillResult, FormHalted, fill_form
-from talentagent.ats.fallback import BoundedFallback, FallbackCapExceeded
-from talentagent.ats.fieldmap import load_map
+from talentagent.ats.fallback import BoundedFallback
+from talentagent.ats.fieldmap import FieldMap, load_map
+from talentagent.ats.halt import HaltedRun
 from talentagent.ats.package import ApplicationPackage
 from talentagent.ats.page import Page
-from talentagent.models.client import ModelClient, QuotaExhausted
+from talentagent.ats.platforms import UnsupportedPlatform, platform_for
+from talentagent.models.client import GoldenResponseMissing, ModelClient, QuotaExhausted
 from talentagent.net.fetch import Fetcher
 from talentagent.state.packages import PackageStore
 
-PLATFORM_BY_HOST = {
-    "boards.greenhouse.io": "greenhouse",
-    "job-boards.greenhouse.io": "greenhouse",
-    "jobs.lever.co": "lever",
-    "jobs.ashbyhq.com": "ashby",
-}
-"""Maps a posting host to the platform whose field map applies to it."""
+__all__ = ["UnsupportedPlatform", "WorkerOutcome", "main", "platform_for", "run"]
+"""Re-exported from `talentagent.ats.platforms`, which the live page backend also reads."""
 
-
-class UnsupportedPlatform(ValueError):
-    """Raised when a posting URL is not one of the three targeted platforms."""
-
-    def __init__(self, host: str) -> None:
-        """Name the host that has no field map."""
-        self.host = host
-        super().__init__(
-            f"No field map for {host!r}. The build targets Greenhouse, Lever, and Ashby "
-            f"(ADR-0010); a platform below 90% on fixtures is dropped rather than half-supported."
-        )
+_NO_TRANSPORT = (
+    "No recorded response covered a custom question and no live model transport is configured, "
+    "so custom questions were left unanswered. The deterministic fill completed; the first live "
+    "run is issue #18."
+)
+"""Why a run degrades when the model cannot be reached at all. The replay layer answers every
+question the fixtures cover, and Phase 5 wires the live transport behind it; until then a genuinely
+novel question degrades the run rather than crashing it (Architecture 7).
+"""
 
 
 @dataclass
@@ -55,24 +48,13 @@ class WorkerOutcome:
     Attributes:
         capture: The run artifact.
         artifact_dir: Where it was written.
-        degraded: Set when the run finished without the model, because the quota was exhausted.
+        degraded: Set when the run finished without the model — the daily quota was exhausted, or
+            no transport was configured to answer a question the recordings do not cover.
     """
 
     capture: RunCapture
     artifact_dir: Path
     degraded: str | None = None
-
-
-def platform_for(url: str) -> str:
-    """Return the platform a posting URL belongs to.
-
-    Raises:
-        UnsupportedPlatform: if there is no map for its host.
-    """
-    host = urlparse(url).hostname or ""
-    if host not in PLATFORM_BY_HOST:
-        raise UnsupportedPlatform(host)
-    return PLATFORM_BY_HOST[host]
 
 
 def run(
@@ -93,6 +75,8 @@ def run(
     - An exhausted daily quota finishes the deterministic fill without the fallback and reports
       itself as degraded, rather than failing silently or spinning.
     - A fallback cap halts, because that many unmapped fields is a map problem.
+    - A question with no recorded response and no live transport behind it degrades the same way
+      the quota does, so the run still produces an artifact (see `_NO_TRANSPORT`).
     """
     platform = platform_for(posting_url)
     package = store.load(application_id)
@@ -109,9 +93,14 @@ def run(
             "The deterministic fill completed; re-run tomorrow to answer the rest."
         )
         result = _deterministic_only(page, field_map, package)
-    except (FormHalted, FallbackCapExceeded) as exc:
+    except GoldenResponseMissing:
+        degraded = _NO_TRANSPORT
+        result = _deterministic_only(page, field_map, package)
+    except HaltedRun as exc:
         halted = str(exc)
-        result = FillResult(completion=ZERO)
+        # The partial fill travels on the halt, so the capture reports the form as it actually
+        # stands. An empty figure here would read as a form with nothing left to fill.
+        result = exc.partial_fill()
 
     capture = build_capture(package.posting_id, platform, result, fallback, halted=halted)
     artifact_dir = write_capture(
@@ -121,11 +110,8 @@ def run(
     return WorkerOutcome(capture=capture, artifact_dir=artifact_dir, degraded=degraded)
 
 
-def _deterministic_only(page: Page, field_map: object, package: ApplicationPackage) -> FillResult:
-    """Re-run the fill with no fallback, for the degraded path."""
-    from talentagent.ats.fieldmap import FieldMap
-
-    assert isinstance(field_map, FieldMap)
+def _deterministic_only(page: Page, field_map: FieldMap, package: ApplicationPackage) -> FillResult:
+    """Re-run the fill with no fallback, for the degraded paths."""
     return fill_form(page, field_map, package)
 
 
