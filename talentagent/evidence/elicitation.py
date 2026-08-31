@@ -44,9 +44,9 @@ class Question(BaseModel):
 def build_gap_question(gap: Gap) -> Question:
     """Build a question requesting quantity, timeframe, and role relative to team."""
     question_text = (
-        f"Nothing in the evidence graph touches {gap.text!r}. Have you worked on this, "
-        "over what timeframe, what was your specific role vs the team's, and what quantitative "
-        "outcome or scale resulted?"
+        f"Nothing you've written so far covers {gap.text!r}. Have you done this? If so, over "
+        "what timeframe, what was your own role as opposed to the team's, and how big was "
+        "it — numbers, scale, or outcome?"
     )
     return Question(
         id=f"q_{gap.requirement_id}",
