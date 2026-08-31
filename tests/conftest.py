@@ -26,8 +26,9 @@ def _deny(*_args: object, **_kwargs: object) -> None:
     """Stand in for socket.socket, refusing every outbound connection attempt."""
     raise NetworkAccessDenied(
         "This test attempted an outbound network connection. The suite makes zero API calls "
-        "(ADR-0012): record a golden response with `python -m talentagent.models.record` and "
-        "replay it, or mark the test `@pytest.mark.network` if it needs the emulator."
+        "(ADR-0012): record a golden response through a client built with `record=True`, copy it "
+        "into tests/fixtures/golden/, or mark the test `@pytest.mark.network` if it needs the "
+        "emulator."
     )
 
 
@@ -43,6 +44,17 @@ def _no_network(request: pytest.FixtureRequest) -> Iterator[None]:
         yield
     finally:
         socket.socket = original  # type: ignore[misc]
+
+
+@pytest.fixture(autouse=True)
+def _no_live_model(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Pin the UI server's model client to None for every test.
+
+    The server builds a live client at import when a `GEMINI_API_KEY` is present, so without
+    this a developer with a key configured would run a different suite from CI. Tests that mean
+    to exercise a model inject their own client (ADR-0012).
+    """
+    monkeypatch.setattr("talentagent.ui.server.MODEL_CLIENT", None)
 
 
 @pytest.fixture

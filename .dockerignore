@@ -1,0 +1,22 @@
+# Never let a credential into an image layer.
+.env
+.env.*
+
+# Local environments and caches — reinstalled in the image, and large.
+.venv/
+.venv-docs/
+.cache/
+.git/
+.github/
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+**/__pycache__/
+site/
+docs/
+# Excluding `tests/` outright would stop Docker descending, so the negation below
+# could never match. The glob form lets the fixture forms back in.
+tests/**
+!tests/fixtures/ats/**
+*.md
+!README.md

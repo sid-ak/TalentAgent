@@ -1,0 +1,391 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TalentAgent</title>
+<link rel="icon" href="/favicon.ico">
+<style>
+  :root {
+    --bg: #0c0d10; --panel: #14161b; --panel-2: #1a1d24; --line: #262a33;
+    --ink: #e8eaf0; --ink-dim: #9aa1b1; --ink-faint: #656c7d;
+    --accent: #7aa2f7; --good: #7ec699; --warn: #e0af68; --bad: #f7768e;
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font: 14px/1.55 var(--sans); -webkit-font-smoothing: antialiased;
+  }
+  header {
+    display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap;
+    padding: 18px 24px; border-bottom: 1px solid var(--line);
+  }
+  h1 { font-size: 15px; margin: 0; letter-spacing: .28em; text-transform: uppercase; }
+  .tag { font-size: 12px; color: var(--ink-dim); }
+  .spacer { flex: 1; }
+  .pill {
+    font: 11px/1 var(--mono); padding: 5px 9px; border-radius: 999px;
+    border: 1px solid var(--line); color: var(--ink-dim); white-space: nowrap;
+  }
+  .pill.on { color: var(--good); border-color: #2c4a3a; }
+  .pill.off { color: var(--warn); border-color: #4a3f2c; }
+
+  main {
+    display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1px;
+    background: var(--line); min-height: calc(100vh - 61px);
+  }
+  section { background: var(--bg); padding: 20px; min-width: 0; }
+  h2 {
+    font: 11px/1 var(--mono); letter-spacing: .18em; text-transform: uppercase;
+    color: var(--ink-faint); margin: 0 0 4px;
+  }
+  .lede { color: var(--ink-dim); font-size: 12.5px; margin: 0 0 16px; max-width: 46ch; }
+
+  textarea {
+    width: 100%; background: var(--panel); color: var(--ink); resize: vertical;
+    border: 1px solid var(--line); border-radius: 8px; padding: 11px 12px;
+    font: 13px/1.5 var(--sans);
+  }
+  textarea:focus { outline: none; border-color: var(--accent); }
+  button {
+    background: var(--accent); color: #0c0d10; border: 0; border-radius: 7px;
+    padding: 9px 15px; font: 600 13px var(--sans); cursor: pointer; margin-top: 9px;
+  }
+  button:hover:not(:disabled) { filter: brightness(1.1); }
+  button:disabled { opacity: .45; cursor: default; }
+  button.ghost { background: transparent; color: var(--ink-dim); border: 1px solid var(--line); }
+
+  .card {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 9px;
+    padding: 12px 13px; margin-bottom: 9px;
+  }
+  .empty {
+    color: var(--ink-faint); font-size: 12.5px; border: 1px dashed var(--line);
+    border-radius: 9px; padding: 18px; text-align: center;
+  }
+  .divider { height: 1px; background: var(--line); margin: 22px 0 18px; }
+
+  .step { display: flex; gap: 11px; padding: 9px 0; animation: rise .28s ease both; }
+  @keyframes rise { from { opacity: 0; transform: translateY(5px); } }
+  .rail { display: flex; flex-direction: column; align-items: center; padding-top: 4px; }
+  .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--ink-faint); flex: none; }
+  .thread { flex: 1; width: 1px; background: var(--line); margin-top: 5px; min-height: 8px; }
+  .step-body { flex: 1; min-width: 0; }
+  .step-title { font-size: 13px; font-weight: 600; }
+  .step-detail { font-size: 12px; color: var(--ink-dim); margin-top: 2px; }
+  .step[data-kind="model"] .dot { background: var(--accent); box-shadow: 0 0 0 3px #7aa2f722; }
+  .step[data-kind="decide"] .dot { background: var(--warn); }
+  .step[data-kind="guardrail"] .dot { background: var(--good); }
+  .step[data-kind="compose"] .dot { background: var(--good); }
+  .badge {
+    font: 10px/1 var(--mono); text-transform: uppercase; letter-spacing: .1em;
+    border: 1px solid var(--line); border-radius: 4px; padding: 3px 6px;
+    color: var(--ink-faint); margin-left: 7px; vertical-align: 1px;
+  }
+  .badge.tier { color: var(--accent); border-color: #2c3a52; }
+
+  .bullet-text { font-size: 13.5px; }
+  .credit {
+    font: 11px/1.4 var(--mono); color: var(--ink-faint); margin-top: 8px;
+    padding-top: 8px; border-top: 1px dashed var(--line);
+  }
+  .credit b { color: var(--ink-dim); font-weight: 500; }
+  .gap { border-left: 2px solid var(--warn); }
+  .gap-q { font-size: 12.5px; color: var(--ink-dim); margin-bottom: 9px; }
+  .foot {
+    font-size: 12px; color: var(--ink-faint); border-top: 1px solid var(--line);
+    margin-top: 18px; padding-top: 12px;
+  }
+  .err { color: var(--bad); font-size: 12.5px; margin-top: 9px; }
+  .platform-row { display: flex; gap: 7px; flex-wrap: wrap; margin-bottom: 11px; }
+  .platform-row button { margin-top: 0; }
+  .state {
+    font: 11px/1 var(--mono); letter-spacing: .08em; padding: 4px 7px; border-radius: 4px;
+    border: 1px solid var(--line); color: var(--ink-dim);
+  }
+  .state.good { color: var(--good); border-color: #2c4a3a; }
+  .state.bad { color: var(--bad); border-color: #52303a; }
+  .state.warn { color: var(--warn); border-color: #4a3f2c; }
+  .state.accent { color: var(--accent); border-color: #2c3a52; }
+  @media (max-width: 1000px) { main { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>TalentAgent</h1>
+  <span class="tag">Every line it writes traces to something you actually did.</span>
+  <span class="spacer"></span>
+  <span class="pill" id="p-model">checking…</span>
+  <span class="pill" id="p-evidence">nothing added yet</span>
+  <span class="pill on" id="p-g3">Nothing is ever submitted for you</span>
+</header>
+
+<main>
+  <!-- ─── 1. evidence ─────────────────────────────────────────── -->
+  <section>
+    <h2>1 · What you have done</h2>
+    <p class="lede">
+      Write it however you'd say it out loud. This is the only material the agent is allowed to
+      work from, so nothing it produces can drift away from what's here.
+    </p>
+    <textarea id="ev" rows="4" placeholder="Cut Kubernetes rollout time from 40 minutes to 6 by rewriting the deploy pipeline in Go."></textarea>
+    <button id="add">Add this</button>
+    <div class="divider"></div>
+    <h2>Your material</h2>
+    <div id="nodes"><div class="empty">Nothing yet. Add something above.</div></div>
+  </section>
+
+  <!-- ─── 2. agent ────────────────────────────────────────────── -->
+  <section>
+    <h2>2 · The job</h2>
+    <p class="lede">
+      Paste a posting. The agent reads it and works through it one requirement at a time. Every
+      line below is a step it actually took, not a summary written afterwards.
+    </p>
+    <textarea id="jd" rows="7" placeholder="Paste a job description…"></textarea>
+    <button id="run">Run the agent</button>
+    <div id="err" class="err" hidden></div>
+    <div class="divider"></div>
+    <h2>What it did</h2>
+    <div id="trace"><div class="empty">The agent hasn't run yet.</div></div>
+  </section>
+
+  <!-- ─── 3. package ──────────────────────────────────────────── -->
+  <section>
+    <h2>3 · What it produced</h2>
+    <p class="lede">
+      Every bullet points back to the thing you wrote that it came from. Where you hadn't given
+      it enough to go on, you get a question instead of a sentence.
+    </p>
+    <div id="out"><div class="empty">Run the agent to see the package.</div></div>
+
+    <div class="divider"></div>
+    <h2>4 · After you apply</h2>
+    <p class="lede">
+      Paste the replies you got, separated by a line with three dashes. It works out where the
+      application actually stands — and it will not move anything on a message it doesn't
+      recognise. One thread at a time, for now.
+    </p>
+    <textarea id="inbox" rows="5" placeholder="From: careers@example.com&#10;Thanks for applying, we'll review it.&#10;---&#10;From: recruiter@example.com&#10;Are you free Thursday for a quick call?"></textarea>
+    <button id="read">Read the replies</button>
+    <div id="inbox-out"></div>
+  </section>
+</main>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) =>
+  ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+async function api(path, body) {
+  const res = await fetch(path, body === undefined
+    ? {}
+    : { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'Request failed');
+  return data;
+}
+
+// ── header state ────────────────────────────────────────────────
+async function refreshStatus() {
+  try {
+    const s = await api('/api/status');
+    const p = $('p-model');
+    p.textContent = s.gemini_connected ? `Gemini · ${s.models.tier_2}` : 'No API key · offline mode';
+    p.className = 'pill ' + (s.gemini_connected ? 'on' : 'off');
+  } catch { /* header is cosmetic; the page still works */ }
+}
+
+async function refreshGraph() {
+  const g = await api('/api/evidence-graph');
+  const accs = g.nodes.filter((n) => n.type === 'accomplishment');
+  $('p-evidence').textContent =
+    accs.length === 0 ? 'nothing added yet' : `${accs.length} thing${accs.length === 1 ? '' : 's'} you've done`;
+  $('nodes').innerHTML = accs.length === 0
+    ? '<div class="empty">Nothing yet. Add something above.</div>'
+    : accs.map((n) => `
+        <div class="card">
+          <div class="bullet-text">${esc(n.claim)}</div>
+          <div class="credit">in your own words</div>
+        </div>`).join('');
+}
+
+// ── add evidence ────────────────────────────────────────────────
+$('add').onclick = async () => {
+  const text = $('ev').value.trim();
+  if (!text) return;
+  $('add').disabled = true;
+  try {
+    await api('/api/profile/add-statement', { raw_text: text });
+    $('ev').value = '';
+    await refreshGraph();
+  } finally { $('add').disabled = false; }
+};
+
+// ── run the agent ───────────────────────────────────────────────
+const KIND_LABEL = {
+  observe: 'reading', model: 'gemini', retrieve: 'looking',
+  decide: 'deciding', compose: 'writing', guardrail: 'checking',
+};
+
+async function renderTrace(steps) {
+  const el = $('trace');
+  el.innerHTML = '';
+  for (let i = 0; i < steps.length; i++) {
+    const s = steps[i];
+    const div = document.createElement('div');
+    div.className = 'step';
+    div.dataset.kind = s.kind;
+    div.innerHTML = `
+      <div class="rail"><div class="dot"></div>${i < steps.length - 1 ? '<div class="thread"></div>' : ''}</div>
+      <div class="step-body">
+        <div class="step-title">${esc(s.title)}
+          <span class="badge">${esc(KIND_LABEL[s.kind] || s.kind)}</span>
+          ${s.tier ? `<span class="badge tier">${esc(s.tier)}</span>` : ''}
+        </div>
+        <div class="step-detail">${esc(s.detail)}</div>
+      </div>`;
+    el.appendChild(div);
+    await new Promise((r) => setTimeout(r, 90));
+  }
+}
+
+function renderPackage(run) {
+  const pkg = run.package;
+  const bullets = (pkg?.bullets || []).map((b) => `
+    <div class="card">
+      <div class="bullet-text">${esc(b.text)}</div>
+      <div class="credit">
+        drawn from what you wrote
+      </div>
+    </div>`).join('');
+
+  const gaps = (run.questions || []).map((q) => `
+    <div class="card gap">
+      <div class="gap-q">${esc(q.question)}</div>
+      <textarea rows="3" data-gap="${esc(q.requirement_id)}" placeholder="Answer in your own words, or leave it — it won't fill this in for you."></textarea>
+      <button class="ghost" data-answer="${esc(q.requirement_id)}">Add answer and re-run</button>
+    </div>`).join('');
+
+  $('out').innerHTML = `
+    <h2>${(pkg?.bullets || []).length} line${(pkg?.bullets || []).length === 1 ? '' : 's'} it can back up</h2>
+    ${bullets || '<div class="empty">Nothing you have written covers this role yet.</div>'}
+    ${gaps ? `<div class="divider"></div><h2>${run.questions.length} thing${run.questions.length === 1 ? '' : 's'} it needs to ask you</h2>
+      <p class="lede">It stopped here rather than making something up. Answer and it will
+      try again with what you've told it.</p>${gaps}` : ''}
+    <div class="divider"></div>
+    <h2>Put it on the employer's form</h2>
+    <p class="lede">The agent fills the real form fields and stops. It has no way to press submit:
+      the code it drives has no submit button in it at all.</p>
+    <div class="platform-row">
+      <button class="ghost" data-fill="greenhouse">Greenhouse</button>
+      <button class="ghost" data-fill="lever">Lever</button>
+      <button class="ghost" data-fill="ashby">Ashby</button>
+    </div>
+    <div id="fill"></div>
+    <div class="foot">
+      Nothing here has been sent anywhere. Applying is always your call, never the agent's.
+    </div>`;
+
+  $('out').querySelectorAll('[data-fill]').forEach((btn) => {
+    btn.onclick = async () => {
+      const platform = btn.dataset.fill;
+      $('fill').innerHTML = `<div class="empty">Filling the ${esc(platform)} form…</div>`;
+      try {
+        const r = await api('/api/ats-fill', { platform });
+        const pct = Math.round(r.completion_rate * 100);
+        $('fill').innerHTML = `
+          <div class="card">
+            <div class="bullet-text">${pct}% of the ${esc(platform)} form filled,
+              in ${r.passes} pass${r.passes === 1 ? '' : 'es'}.</div>
+            <div class="credit">
+              ${r.filled_fields.map((f) =>
+                `${esc(f.name)} &larr; ${esc(f.source || 'unmapped')}`).join('<br>')}
+              ${r.outstanding.length
+                ? `<br><br>left blank, nothing to fill it from:<br>${r.outstanding.map(esc).join('<br>')}`
+                : ''}
+              <br><br>submitted: ${r.submitted}
+            </div>
+          </div>`;
+      } catch (e) {
+        $('fill').innerHTML = `<div class="err">${esc(e.message)}</div>`;
+      }
+    };
+  });
+
+  $('out').querySelectorAll('[data-answer]').forEach((btn) => {
+    btn.onclick = async () => {
+      const box = $('out').querySelector(`textarea[data-gap="${btn.dataset.answer}"]`);
+      const answer = box.value.trim();
+      if (!answer) return;
+      btn.disabled = true;
+      await api('/api/promote-statement', { answer });
+      await refreshGraph();
+      await runAgent();
+    };
+  });
+}
+
+async function runAgent() {
+  const posting = $('jd').value.trim();
+  if (!posting) return;
+  $('run').disabled = true;
+  $('run').textContent = 'Running…';
+  $('err').hidden = true;
+  try {
+    const run = await api('/api/agent/run', { posting_text: posting });
+    await renderTrace(run.steps);
+    renderPackage(run);
+    await refreshStatus();
+  } catch (e) {
+    $('err').textContent = e.message;
+    $('err').hidden = false;
+  } finally {
+    $('run').disabled = false;
+    $('run').textContent = 'Run the agent';
+  }
+}
+$('run').onclick = runAgent;
+
+// ── read the replies ────────────────────────────────────────────
+const STATE_TONE = {
+  REJECTED: 'bad', OFFER: 'good', ONSITE: 'good', SCREEN: 'accent', GHOSTED: 'warn',
+};
+
+$('read').onclick = async () => {
+  const text = $('inbox').value.trim();
+  if (!text) return;
+  $('read').disabled = true;
+  $('inbox-out').innerHTML = '<div class="empty">Reading…</div>';
+  try {
+    const r = await api('/api/inbox/read', { text });
+    $('inbox-out').innerHTML = `
+      <div class="card">
+        <div class="bullet-text">This application is at
+          <span class="state ${STATE_TONE[r.final_state] || ''}">${esc(r.final_state)}</span>
+        </div>
+        <div class="credit">
+          ${r.messages.map((m) => `
+            ${esc(m.company || 'unnamed sender')} &mdash; ${esc(m.label.replace(/_/g, ' '))}
+            ${m.state_before === m.state_after
+              ? '<br>&nbsp;&nbsp;left it where it was'
+              : `<br>&nbsp;&nbsp;${esc(m.state_before)} &rarr; ${esc(m.state_after)}`}
+            ${m.reason ? `<br>&nbsp;&nbsp;<i>${esc(m.reason)}</i>` : ''}
+          `).join('<br><br>')}
+        </div>
+      </div>`;
+  } catch (e) {
+    $('inbox-out').innerHTML = `<div class="err">${esc(e.message)}</div>`;
+  } finally {
+    $('read').disabled = false;
+  }
+};
+
+refreshStatus();
+refreshGraph();
+</script>
+</body>
+</html>

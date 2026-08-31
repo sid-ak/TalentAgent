@@ -24,3 +24,10 @@ venv/
 .DS_Store
 .idea/
 .vscode/
+
+# Node and frontend build artifacts
+node_modules/
+**/node_modules/
+.angular/
+**/.angular/
+.cache/

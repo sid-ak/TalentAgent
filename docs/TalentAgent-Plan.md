@@ -1,6 +1,6 @@
 # TalentAgent Implementation Plan
 
-The build broken into six phases. Each phase is a GitHub milestone, each has one epic issue holding
+The build broken into five phases. Each phase is a GitHub milestone, each has one epic issue holding
 its task checklist, and each ends at a gate that can be passed or failed rather than at a feeling of
 completeness.
 
@@ -16,11 +16,10 @@ either — for a contract read the spec, for a rationale read the relevant [ADR]
 2. [Phase 0: Foundations, fixtures, and the guardrail harness](#2-phase-0-foundations-fixtures-and-the-guardrail-harness)
 3. [Phase 1: Two-pass apply, deterministic execution](#3-phase-1-two-pass-apply-deterministic-execution)
 4. [Phase 2: Evidence graph and credited composition](#4-phase-2-evidence-graph-and-credited-composition)
-5. [Phase 3: The autonomous inbound pipeline](#5-phase-3-the-autonomous-inbound-pipeline)
-6. [Phase 4: Opportunity scoring and the analyst loop](#6-phase-4-opportunity-scoring-and-the-analyst-loop)
-7. [Phase 5: Review surface, deployment, and acceptance](#7-phase-5-review-surface-deployment-and-acceptance)
-8. [Risk coverage](#8-risk-coverage)
-9. [Definition of Done coverage](#9-definition-of-done-coverage)
+5. [Phase 2.5: Interactive demo and review surface](#5-phase-25-interactive-demo-and-review-surface)
+6. [Phase 3: What remains](#6-phase-3-what-remains)
+7. [Risk coverage](#7-risk-coverage)
+8. [Definition of Done coverage](#8-definition-of-done-coverage)
 
 ---
 
@@ -55,16 +54,11 @@ nothing is yet waiting for turns a precondition into a delay.
 | 0 | Foundations, fixtures, and the guardrail harness | [#1](https://github.com/sid-ak/TalentAgent/issues/1) | — | R6 |
 | 1 | Two-pass apply, deterministic execution | [#11](https://github.com/sid-ak/TalentAgent/issues/11) | A | R1 |
 | 2 | Evidence graph and credited composition | [#19](https://github.com/sid-ak/TalentAgent/issues/19) | B | R2 |
-| 3 | The autonomous inbound pipeline | [#29](https://github.com/sid-ak/TalentAgent/issues/29) | D | R4 |
-| 4 | Opportunity scoring and the analyst loop | [#39](https://github.com/sid-ak/TalentAgent/issues/39) | C, E | R3, R5 |
-| 5 | Review surface, deployment, and acceptance | [#49](https://github.com/sid-ak/TalentAgent/issues/49) | — | — |
+| 2.5 | Interactive demo and review surface | — | — | — |
+| 3 | What remains | [#29](https://github.com/sid-ak/TalentAgent/issues/29), [#39](https://github.com/sid-ak/TalentAgent/issues/39), [#49](https://github.com/sid-ak/TalentAgent/issues/49) | C, D, E | R3, R4, R5 |
 
 Each phase's epic holds the task checklist, and every task issue cites the specification sections and
-decision records it implements.
-
-Phases 3 and 4 can proceed in either order once Phase 0 is complete; they are numbered this way
-because the pipeline feeds the outcome log the analyst reads, and having real rows alongside the
-backfill makes the analyst's first findings more informative.
+decision records it implements. Phase 3 keeps the three epics it inherited, one per body of work.
 
 ---
 
@@ -95,10 +89,10 @@ Exit criteria
 Blocks every other phase.
 
 Four items first written here are owned by later phases, each by the one phase that reads it: the
-Firestore collections and rules and the two evidence profiles by Phase 2, the mail corpus by
-Phase 3, and the outcome backfill by Phase 4. The exit criterion that `outcomes` is provably
-append-only travels with the rules to Phase 2, and Spec §13.2's requirement that every fixture
-exists and is anonymised is now met corpus by corpus rather than all at once.
+Firestore collections and rules and the two evidence profiles by Phase 2, and the mail corpus and
+the outcome backfill by Phase 3. The exit criterion that `outcomes` is provably append-only travels
+with the rules to Phase 2, and Spec §13.2's requirement that every fixture exists and is anonymised
+is now met corpus by corpus rather than all at once.
 
 ---
 
@@ -128,7 +122,7 @@ Exit criteria (Spike A)
 - Zero submissions from any non-human path, asserted in tests.
 
 The first and third are settled in this phase, on fixtures and in CI. The live runs need a person at
-a real employer's page, so they are executed in Phase 5 through the same dispatch bridge a user
+a real employer's page, so they are executed in Phase 3 through the same dispatch bridge a user
 would use, and the gate document reports the criterion as outstanding until they exist rather than
 reporting a pass. What Phase 1 establishes is that the approach works and which platforms survive;
 what the live runs add is that the maps hold against a real DOM.
@@ -172,7 +166,57 @@ Exit criteria (Spike B)
 
 ---
 
-## 5. Phase 3: The autonomous inbound pipeline
+## 5. Phase 2.5: Interactive demo and review surface
+
+Goal: the interactive human review surface and demonstrable UI. A review gate where every line is
+clickable through to what justifies it, gaps are interactive deliverables with live elicitation,
+candidates can manage custom profiles, and ATS form filling is visualised with human-only gates.
+
+Scope
+
+- Candidate profile management: upload resume (PDF parsing via `pypdf`), ingest GitHub repositories,
+  add LinkedIn references, and write verbatim accomplishment statements alongside preset Profile A
+  (engineering artifacts) and Profile B (non-engineering statements).
+- The review UI: package review with credit trace-through, gaps shown as a deliverable rather than an
+  error list, and coverage displayed per class.
+- Interactive evidence graph explorer: visual node graph (Artifacts, Statements, Skills, Metrics,
+  Accomplishments) with attestation class filtering and visual representation of the derived
+  quarantine boundary.
+- Live elicitation and statement promotion: interactive scoped question answering promoting raw text
+  verbatim into the graph and triggering real-time re-composition.
+- ATS execution playback: step-by-step form fill visualization across Greenhouse, Lever, and Ashby
+  with field resolution mapping, completion meters, and human-only submission gate enforcement.
+- System guardrail and zero-budget resource monitor: live display of Invariants G1 through G7 and daily
+  Gemini Flash quota tracking.
+- A single self-contained page in `web/`, served by a dependency-free Python API server in
+  `talentagent/ui/`. No build step: the page is the source.
+
+Exit criteria
+
+- The review surface serves locally and from a container with no build step.
+- Candidate profiles (Profile A, Profile B, custom) compose packages with 100% credit coverage.
+- Adversarial posting yields 100% gaps and zero hallucinations live in the UI.
+- Scoped elicitation answers promote verbatim into the graph and update composition in real time.
+- `submit_application` remains human-only and disabled for automated agents across all views.
+
+---
+
+## 6. Phase 3: What remains
+
+Everything the earlier phases proved is now in place: forms fill themselves, every generated line is
+credited, and a person can review a package and answer a gap. What is left is the work that turns
+that into a system someone can run — three bodies of work, none of which blocks another, gathered
+into one phase because they are what remains rather than because they belong to one subject.
+
+They are ordered here the way they feed each other. The inbound pipeline writes the outcome log the
+analyst reads, so real rows arriving alongside the backfill make the analyst's first findings more
+informative; deployment comes last because it is what carries the other two, and the finished
+system, to a real user. Nothing forces that order, though: the earlier phases are what all three
+depended on, so any of them can be picked up first.
+
+Goal: retire R3, R4, and R5, and pass the acceptance run. Spikes C, D, and E are all gated here.
+
+### 6.1 The autonomous inbound pipeline
 
 Goal: retire R4. Application state maintains itself from the inbox and the calendar, with no user
 action, and silence is detected as its own signal.
@@ -198,9 +242,7 @@ Exit criteria (Spike D)
 - Overlapping triggers provably do not double-advance state.
 - A message received is reflected in state by the end of the next scheduled run.
 
----
-
-## 6. Phase 4: Opportunity scoring and the analyst loop
+### 6.2 Opportunity scoring and the analyst loop
 
 Goal: retire R3 and R5. Two scores exist, they are never merged, and only one of them is allowed to
 exclude an opportunity. The analyst closes one full loop: hypothesis, experiment, measured result,
@@ -234,22 +276,14 @@ Exit criteria (Spikes C and E)
 - Eligibility is the only score able to exclude, asserted in tests.
 - The exploration budget is honoured and visible in the outcome log.
 
----
+### 6.3 Production deployment and acceptance
 
-## 7. Phase 5: Review surface, deployment, and acceptance
-
-Goal: the human-facing half. A review gate where every line is clickable through to what justifies
-it, a deployment that works from a clean project, and a run against the Definition of Done.
+Goal: production deployment and acceptance verification. A deployment that works from a clean
+project, and a run against the Definition of Done.
 
 Scope
 
-- The review UI: package review with credit trace-through, gaps shown as a deliverable rather than
-  an error list, and coverage displayed per class.
-- A pipeline view and activity feed, both derived from state — with no control anywhere that lets a
-  user type a pipeline state.
-- Elicitation answering, and promotion of the user's raw answer into a Statement node.
-- Firebase Auth, Firebase Hosting deployment, and the `workflow_dispatch` bridge from the UI to the
-  form worker.
+- Firebase Auth, Firebase Hosting deployment, and the `workflow_dispatch` bridge to the form worker.
 - The outstanding Spike A criterion: one clean end-to-end run against a live posting per platform,
   dispatched through that bridge, with the artifact retained as the evidence.
 - Measurement: the metrics in Spec §12 collected and reported, including tier-down rate and daily
@@ -264,7 +298,7 @@ Exit criteria
 
 ---
 
-## 8. Risk coverage
+## 7. Risk coverage
 
 Every risk in Spec §13.1 is retired by a named phase gate rather than by general progress.
 
@@ -272,32 +306,34 @@ Every risk in Spec §13.1 is retired by a named phase gate rather than by genera
 |---|---|---|
 | R1 — server-side fill unreliable on live forms | Phase 1 | 90% fixture completion per platform; one clean live run each |
 | R2 — generation fabricates where evidence is absent | Phase 2 | Zero `derived` leakage; adversarial posting yields gaps |
-| R3 — analyst hardens what little data it has | Phase 4 | Intervals reported; exploration budget honoured; findings expire |
+| R3 — analyst hardens what little data it has | Phase 3 | Intervals reported; exploration budget honoured; findings expire |
 | R4 — classification and attribution are noisy | Phase 3 | 95% precision, 90% transition accuracy |
-| R5 — eligibility scoring is confidently incorrect | Phase 4 | Every score traces to a named public source |
+| R5 — eligibility scoring is confidently incorrect | Phase 3 | Every score traces to a named public source |
 | R6 — free-tier quota throttles development | Phase 0 | Golden fixtures; test suite makes zero API calls |
 
-## 9. Definition of Done coverage
+## 8. Definition of Done coverage
 
-Spec §14 is the acceptance list. Each item is owned by the phase that produces it, and Phase 5
-verifies the whole list rather than re-deriving it.
+Spec §14 is the acceptance list. Each item is owned by the phase that produces it, and the
+acceptance run in [§6.3](#63-production-deployment-and-acceptance) verifies the whole list rather
+than re-deriving it.
 
 | Definition of Done item | Owning phase |
 |---|---|
 | Three platforms fill at ≥90% on fixtures | 1 |
-| One clean live run per platform | 5 |
+| One clean live run per platform | 3 |
 | 100% credit coverage, split by attestation class | 2 |
 | Zero `derived` claims reach a package | 2 |
 | Adversarial posting produces gaps, not fabrications | 2 |
 | The no-public-artifacts profile produces a fully credited application | 2 |
-| One experiment resolved end to end; a second actively assigning | 4 |
-| Priors report intervals; a zero-reply segment stays visible | 4 |
-| Only eligibility can exclude | 4 |
-| Exploration budget honoured and visible in the outcome log | 4 |
+| Interactive review surface with credit trace and live elicitation | 2.5 |
+| One experiment resolved end to end; a second actively assigning | 3 |
+| Priors report intervals; a zero-reply segment stays visible | 3 |
+| Only eligibility can exclude | 3 |
+| Exploration budget honoured and visible in the outcome log | 3 |
 | Inbound path on the adaptive schedule, batched triage, idempotency tests | 3 |
-| Tier-down rate measured; quota consumption inside free-tier ceilings | 3, 5 |
+| Tier-down rate measured; quota consumption inside free-tier ceilings | 3 |
 | Test suite makes zero model API calls | 0 |
 | `outcomes` proven append-only | 2 |
 | `submit_application` unreachable from any agent path | 0, 1 |
-| Deploy verified from a clean project | 5 |
-| Architecture documented, including the asynchronous path | 5 |
+| Deploy verified from a clean project | 3 |
+| Architecture documented, including the asynchronous path | 3 |
