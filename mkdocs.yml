@@ -53,6 +53,9 @@ nav:
   - Specification: TalentAgent-Spec.md
   - Architecture: TalentAgent-Architecture.md
   - Plan: TalentAgent-Plan.md
+  - Explanations:
+      - explanations/index.md
+      - Phase 1 - two-pass apply: explanations/phase-1-two-pass-apply.md
   - Phase gates:
       - Spike A - two-pass apply: gates/spike-a.md
   - Decision records:
