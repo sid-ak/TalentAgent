@@ -145,7 +145,7 @@ Do not use bold. Use headings, lists, and backticks for structure and emphasis.
 ### Git
 
 Committing is authorised in this repository, which is a deliberate exception to the usual
-leave-it-staged convention. Pushing is not: the human pushes.
+leave-it-staged convention. Pushing is not, unless it is asked for explicitly: the human pushes.
 
 One branch per phase, named for it — `phase-1-two-pass-apply`. A phase branch that builds on an
 earlier phase is stacked on that phase's branch rather than on `main`. Nothing is committed directly
@@ -192,16 +192,32 @@ When you finish a phase, write `docs/explanations/phase-<n>-<slug>.md`: a plain-
 what now exists and why it matters, for a reader who has not read the specification. Add it to the
 `nav` in `mkdocs.yml`. It is not a changelog of files touched — the commit history already is one.
 
+Every pull request fills in `.github/pull_request_template.md`. Its invariants list is restated
+from this document on purpose: that is where the invariants actually get checked, and a reviewer
+will not open this file to remember them. Delete a line the change cannot affect rather than
+leaving it unticked.
+
+Two workflows put Claude on pull requests. `claude-code-review.yml` reviews every pull request
+automatically and posts inline comments. `claude.yml` responds when someone writes `@claude` in an
+issue, a review, or a comment. Both need a `CLAUDE_CODE_OAUTH_TOKEN` repository secret; without it
+they fail at the action step rather than passing quietly.
+
 ---
 
 ## 7. Repository layout
 
 ```
+talentagent/               The package: agents by owner, plus state, tools, models, ats, net, jobs
+tests/                     Suite and fixture corpora; guardrails/ asserts G1-G7 on its own
+scripts/gen_ref_pages.py   Emits the generated code reference at docs-build time
 docs/                      Specification, architecture, plan, ADRs, diagrams (the MkDocs site)
   ADRs/                    Numbered decision records; README.md is the index
   diagrams/                Rendered SVGs; mermaid source is inlined in the documents
-.github/workflows/         CI and the documentation deployment
-mkdocs.yml                 Site configuration; nav is explicit, so new pages must be added
+  explanations/            One plain-English account per completed phase
+  gates/                   Phase gate records, with the figures that passed or failed them
+.github/workflows/         CI, docs deployment, the ATS form worker, and the Claude reviews
+.github/pull_request_template.md   Filled in for every pull request
+mkdocs.yml                 Site configuration; the prose nav is explicit, the reference is not
 ```
 
 Everything below the documentation is unbuilt and arrives phase by phase. Where a phase introduces a
