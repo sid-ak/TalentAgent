@@ -1,0 +1,75 @@
+name: form-worker
+
+# Pass 2. Fetches a posting, fills its form from the composed package, captures, and halts.
+#
+# It runs here rather than beside the state layer because this is where Chromium and unmetered
+# minutes are (Architecture 2.1), and because every run leaves logs and a retained artifact — the
+# closest thing the zero-budget design has to durable observability (ADR-0012).
+#
+# There is no submit step, and there is no place one could be added: the driver exposes no method
+# that activates a submit control, and the run asserts the page never navigated away (G3).
+
+on:
+  workflow_dispatch:
+    inputs:
+      application_id:
+        description: "The application this fill belongs to"
+        required: true
+        type: string
+      posting_url:
+        description: "Posting URL on Greenhouse, Lever, or Ashby"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  # Keyed on the application, so a double dispatch queues rather than running two concurrent fills
+  # of the same form. Not cancel-in-progress: a half-filled form abandoned mid-run is worse than a
+  # second run waiting.
+  group: form-worker-${{ inputs.application_id }}
+  cancel-in-progress: false
+
+jobs:
+  fill:
+    name: Fill and capture
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          version: "0.5.11"
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+
+      - name: Install with the browser extra
+        run: uv sync --locked --extra browser
+
+      - name: Install Chromium
+        run: uv run playwright install --with-deps chromium
+
+      - name: Fill the form
+        id: fill
+        env:
+          # Actions secrets only. Nothing is committed; the repository is public
+          # (Architecture 6.4).
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          FIRESTORE_CREDENTIALS: ${{ secrets.FIRESTORE_CREDENTIALS }}
+        run: |
+          uv run python -m talentagent.jobs.form_worker \
+            --application-id "${{ inputs.application_id }}" \
+            --posting-url "${{ inputs.posting_url }}" \
+            --artifacts artifacts
+
+      - name: Retain the capture
+        # Runs even on a halt: a partial capture naming the field that stopped the run is
+        # diagnosable, and a discarded run is not (Architecture 7).
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: form-capture-${{ inputs.application_id }}
+          path: artifacts/
+          retention-days: 90

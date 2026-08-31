@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 from talentagent.ats.offline import OfflineHtmlPage, SubmitAttempted, UnknownField
 
-from tests.ats.conftest import ATS_FIXTURES
+from tests.conftest import ATS_FIXTURES
 
 
 def test_fields_carry_the_identities_the_resolver_needs() -> None:

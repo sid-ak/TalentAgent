@@ -18,7 +18,7 @@ from talentagent.ats.page import FormField
 from talentagent.ats.resolver import Missed
 from talentagent.models.client import ModelCall, ModelClient, Tier
 
-from tests.ats.conftest import ATS_FIXTURES
+from tests.conftest import ATS_FIXTURES
 
 
 def _client(golden: Path, answers: dict[str, tuple[str, float]]) -> ModelClient:

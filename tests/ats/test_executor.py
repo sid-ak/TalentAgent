@@ -9,7 +9,7 @@ from talentagent.ats.offline import OfflineHtmlPage
 from talentagent.ats.package import ApplicationPackage
 from talentagent.ats.resolver import Missed
 
-from tests.ats.conftest import ATS_FIXTURES
+from tests.conftest import ATS_FIXTURES
 
 PLATFORMS = ("greenhouse", "lever", "ashby")
 FIXTURES = ("plain.html", "file-upload.html", "custom-questions.html", "conditional.html")

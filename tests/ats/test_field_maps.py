@@ -15,7 +15,7 @@ from talentagent.ats.offline import OfflineHtmlPage
 from talentagent.ats.package import ApplicationPackage
 from talentagent.ats.resolver import resolve
 
-from tests.ats.conftest import ATS_FIXTURES
+from tests.conftest import ATS_FIXTURES
 
 PLATFORMS = ("greenhouse", "lever", "ashby")
 

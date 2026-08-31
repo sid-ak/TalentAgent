@@ -13,7 +13,7 @@ from talentagent.ats.offline import OfflineHtmlPage
 from talentagent.ats.package import ApplicationPackage
 from talentagent.models.client import ModelCall, ModelClient
 
-from tests.ats.conftest import ATS_FIXTURES
+from tests.conftest import ATS_FIXTURES
 
 
 def _answering_client(golden: Path) -> ModelClient:
