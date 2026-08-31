@@ -102,6 +102,17 @@
   .platform-row { display: flex; gap: 7px; flex-wrap: wrap; margin-bottom: 11px; }
   .platform-row button { margin-top: 0; }
   .id-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  #jdurl {
+    width: 100%; background: var(--panel); color: var(--ink); border: 1px solid var(--line);
+    border-radius: 6px; padding: 9px 11px; font: 12.5px var(--sans);
+  }
+  #jdurl:focus { outline: none; border-color: var(--accent); }
+  .filebtn {
+    display: inline-block; background: transparent; color: var(--ink-dim);
+    border: 1px dashed var(--line); border-radius: 7px; padding: 9px 15px;
+    font: 600 13px var(--sans); cursor: pointer;
+  }
+  .filebtn:hover { border-color: var(--accent); color: var(--ink); }
   .id-grid input {
     background: var(--panel); color: var(--ink); border: 1px solid var(--line);
     border-radius: 6px; padding: 8px 10px; font: 12.5px var(--sans); min-width: 0;
@@ -138,7 +149,16 @@
       Write it however you'd say it out loud. This is the only material the agent is allowed to
       work from, so nothing it produces can drift away from what's here.
     </p>
-    <textarea id="ev" rows="4" placeholder="Cut Kubernetes rollout time from 40 minutes to 6 by rewriting the deploy pipeline in Go."></textarea>
+    <label class="filebtn">
+      Upload your resume
+      <input type="file" id="resume" accept="application/pdf,text/plain" hidden>
+    </label>
+    <span id="resume-note" class="saved" hidden></span>
+    <p class="lede" style="margin:9px 0 12px">
+      It splits the file into the things you claim, copying each one word for word. Anything it
+      cannot find verbatim in your file is thrown away rather than added.
+    </p>
+    <textarea id="ev" rows="3" placeholder="Or write one yourself: cut Kubernetes rollout time from 40 minutes to 6 by rewriting the deploy pipeline in Go."></textarea>
     <button id="add">Add this</button>
 
     <div class="divider"></div>
@@ -170,7 +190,11 @@
       Paste a posting. The agent reads it and works through it one requirement at a time. Every
       line below is a step it actually took, not a summary written afterwards.
     </p>
-    <textarea id="jd" rows="7" placeholder="Paste a job description…"></textarea>
+    <input id="jdurl" placeholder="Paste a Greenhouse, Lever, or Ashby posting URL">
+    <p class="lede" style="margin:7px 0 12px">
+      It reads only the platforms whose terms permit it. Anywhere else is refused, not attempted.
+    </p>
+    <textarea id="jd" rows="5" placeholder="Or paste the posting text here instead…"></textarea>
     <button id="run">Run the agent</button>
     <div id="err" class="err" hidden></div>
     <div class="divider"></div>
@@ -284,6 +308,36 @@ $('add').onclick = async () => {
   } finally { $('add').disabled = false; }
 };
 
+// ── resume upload ───────────────────────────────────────────────
+$('resume').onchange = async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const note = $('resume-note');
+  note.hidden = false;
+  note.style.color = 'var(--ink-dim)';
+  note.textContent = `reading ${file.name}…`;
+  try {
+    const body = { filename: file.name };
+    if (file.type === 'application/pdf') {
+      const buf = new Uint8Array(await file.arrayBuffer());
+      let bin = '';
+      buf.forEach((b) => { bin += String.fromCharCode(b); });
+      body.content_base64 = btoa(bin);
+    } else {
+      body.text = await file.text();
+    }
+    const r = await api('/api/profile/upload-resume', body);
+    note.style.color = 'var(--good)';
+    note.textContent = `${r.nodes_added} thing${r.nodes_added === 1 ? '' : 's'} added`;
+    await refreshGraph();
+  } catch (err) {
+    note.style.color = 'var(--bad)';
+    note.textContent = err.message;
+  } finally {
+    e.target.value = '';
+  }
+};
+
 // ── run the agent ───────────────────────────────────────────────
 const KIND_LABEL = {
   observe: 'reading', model: 'gemini', retrieve: 'looking',
@@ -390,12 +444,14 @@ function renderPackage(run) {
 
 async function runAgent() {
   const posting = $('jd').value.trim();
-  if (!posting) return;
+  const url = $('jdurl').value.trim();
+  if (!posting && !url) return;
   $('run').disabled = true;
   $('run').textContent = 'Running…';
   $('err').hidden = true;
   try {
-    const run = await api('/api/agent/run', { posting_text: posting });
+    const run = await api('/api/agent/run',
+      posting ? { posting_text: posting } : { posting_url: url });
     await renderTrace(run.steps);
     renderPackage(run);
     await refreshStatus();

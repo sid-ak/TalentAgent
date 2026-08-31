@@ -92,6 +92,30 @@ class AgentRun(BaseModel):
     used_model: bool
 
 
+def _requirement_texts(raw: object) -> list[str]:
+    """Pull requirement strings out of whatever shape the model returned.
+
+    Asking for a list of objects reliably gets one, except when it does not: the same prompt
+    sometimes answers with bare strings. Accepting both is not laxity about the schema — a
+    requirement is a string either way, and rejecting the whole batch over its wrapper meant
+    silently falling back to line splitting, which is how a model call disappears without anyone
+    noticing (Spec §9.2).
+    """
+    if not isinstance(raw, list):
+        return []
+    texts: list[str] = []
+    for item in raw:
+        if isinstance(item, str):
+            text = item
+        elif isinstance(item, dict):
+            text = str(item.get("text") or item.get("requirement") or "")
+        else:
+            continue
+        if text.strip():
+            texts.append(text.strip())
+    return texts
+
+
 def extract_requirements(
     posting_text: str, model_client: ModelClient | None
 ) -> tuple[list[NormalizedRequirement], bool]:
@@ -108,12 +132,7 @@ def extract_requirements(
                 data={"posting_text": posting_text},
                 schema_name="extract_requirements_v1",
             )
-            raw = resp.get("requirements", [])
-            texts = [
-                item["text"].strip()
-                for item in raw
-                if isinstance(item, dict) and str(item.get("text", "")).strip()
-            ]
+            texts = _requirement_texts(resp.get("requirements", []))
             if texts:
                 return [normalise_requirement(t) for t in texts[:MAX_REQUIREMENTS]], True
         except Exception:  # noqa: BLE001 - degradation is reported, not silent

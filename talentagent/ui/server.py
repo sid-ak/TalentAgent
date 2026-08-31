@@ -36,10 +36,16 @@ from talentagent.evidence.graph import (
     Skill,
     Statement,
 )
-from talentagent.evidence.retrieval import _KNOWN_SKILL_KEYWORDS, normalise_requirement
+from talentagent.evidence.resume import extract_accomplishments
+from talentagent.evidence.retrieval import (
+    _KNOWN_SKILL_KEYWORDS,
+    extract_posting_requirements,
+    normalise_requirement,
+)
 from talentagent.evidence.store import EvidenceStore, LocalEvidenceStore
 from talentagent.models.client import Tier
 from talentagent.models.live import TIER_MODELS, build_live_client
+from talentagent.net.fetch import AllowlistViolation, default_fetcher
 from talentagent.pipeline.gmail import (
     GmailCredentials,
     GmailError,
@@ -180,6 +186,21 @@ class CandidateSession:
 
 GLOBAL_SESSION = CandidateSession()
 """Singleton candidate session for the active application workflow."""
+
+
+def _posting_from_url(url: str) -> str:
+    """Fetch a posting and return the requirement text found in it.
+
+    The fetch goes through the allowlist, so this reads the three ATS platforms whose terms permit
+    it and refuses everything else — including the aggregators that prohibit automated access
+    (ADR-0010, G5). The page arrives as untrusted data and is only ever summarised into
+    requirements; nothing in it can instruct the agent (G7).
+    """
+    page = default_fetcher.fetch(url)
+    requirements = extract_posting_requirements(page.as_data())
+    if not requirements:
+        raise ValueError("no requirements found on that page")
+    return "\n".join(f"- {line}" for line in requirements)
 
 
 def _session_package() -> ApplicationPackage:
@@ -441,9 +462,21 @@ class TalentAgentUIHandler(http.server.BaseHTTPRequestHandler):
 
     def _handle_agent_run(self, body: dict[str, Any]) -> None:
         """Run the agent loop over a posting and return its trace, package, and open gaps."""
-        posting_text = body.get("posting_text", "").strip()
+        posting_text = str(body.get("posting_text", "")).strip()
+        posting_url = str(body.get("posting_url", "")).strip()
+
+        if posting_url and not posting_text:
+            try:
+                posting_text = _posting_from_url(posting_url)
+            except AllowlistViolation as exc:
+                self._send_error(403, str(exc))
+                return
+            except Exception as exc:  # noqa: BLE001 - an unreachable posting is the caller's
+                self._send_error(502, f"Could not read that posting: {exc}")
+                return
+
         if not posting_text:
-            self._send_error(400, "Empty posting text")
+            self._send_error(400, "Give the agent a posting, by text or by URL")
             return
 
         if not get_all_nodes(GLOBAL_SESSION.store):
@@ -533,18 +566,16 @@ class TalentAgentUIHandler(http.server.BaseHTTPRequestHandler):
             self._send_error(400, "No resume text extracted")
             return
 
-        lines = [line.strip("-•* ").strip() for line in resume_text.splitlines() if line.strip()]
-        added_count = 0
-        for line in lines:
-            if len(line) > 20 and not line.startswith("http"):
-                line_skills = _extract_and_save_skills(GLOBAL_SESSION.store, line)
-                promote_statement(
-                    answer=line,
-                    store=GLOBAL_SESSION.store,
-                    claim=line[:120],
-                    skills=line_skills,
-                )
-                added_count += 1
+        accomplishments, used_model = extract_accomplishments(resume_text, MODEL_CLIENT)
+        for line in accomplishments:
+            line_skills = _extract_and_save_skills(GLOBAL_SESSION.store, line)
+            promote_statement(
+                answer=line,
+                store=GLOBAL_SESSION.store,
+                claim=line[:120],
+                skills=line_skills,
+            )
+        added_count = len(accomplishments)
 
         GLOBAL_SESSION.resume_filename = filename
         GLOBAL_SESSION.materials = Materials(resume=Path(filename))
@@ -555,6 +586,7 @@ class TalentAgentUIHandler(http.server.BaseHTTPRequestHandler):
                 "filename": filename,
                 "extracted_length": len(resume_text),
                 "nodes_added": added_count,
+                "used_model": used_model,
                 "total_nodes": len(get_all_nodes(GLOBAL_SESSION.store)),
             },
         )
