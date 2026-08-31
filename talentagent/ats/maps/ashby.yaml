@@ -1,0 +1,23 @@
+# Ashby field map. Ashby prefixes its built-in fields with _systemfield_ and labels several controls
+# with aria-label and nothing else, which is what the resolver's ARIA strategy exists for. Rules for
+# those declare aria alongside name.
+platform: ashby
+rules:
+  - match: {name: "_systemfield_name", label: "Name"}
+    path: identity.full_name
+  - match: {name: "_systemfield_email", label: "Email"}
+    path: identity.email
+  - match: {name: "_systemfield_phone", aria: "Phone"}
+    path: identity.phone
+  - match: {name: "_systemfield_location", aria: "Location"}
+    path: identity.location
+  - match: {name: "_systemfield_linkedin", label: "LinkedIn"}
+    path: links.linkedin
+  - match: {name: "_systemfield_github", label: "GitHub"}
+    path: links.github
+  - match: {name: "_systemfield_website", label: "Website"}
+    path: links.portfolio
+  - match: {name: "_systemfield_resume", label: "Resume"}
+    path: materials.resume
+  - match: {name: "_systemfield_coverletter", aria: "Cover Letter"}
+    path: materials.cover_letter

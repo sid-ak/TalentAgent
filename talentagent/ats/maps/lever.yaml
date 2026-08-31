@@ -1,0 +1,26 @@
+# Lever field map. Lever asks for one full-name field rather than two, which is why the package
+# carries first and last separately and exposes full_name as a derived path.
+platform: lever
+rules:
+  - match: {name: "name", label: "Full name"}
+    path: identity.full_name
+  - match: {name: "email", label: "Email"}
+    path: identity.email
+  - match: {name: "phone", label: "Phone"}
+    path: identity.phone
+  - match: {name: "org", label: "Current company"}
+    path: identity.current_company
+  - match: {name: "location", label: "Location"}
+    path: identity.location
+  - match: {name: "urls[LinkedIn]", label: "LinkedIn URL"}
+    path: links.linkedin
+  - match: {name: "urls[GitHub]", label: "GitHub URL"}
+    path: links.github
+  - match: {name: "urls[Portfolio]", label: "Portfolio URL"}
+    path: links.portfolio
+  - match: {name: "resume", label: "Resume/CV"}
+    path: materials.resume
+  # Lever takes the cover letter as free text in the same control it calls "comments", so this
+  # resolves to the text form rather than the rendered file.
+  - match: {name: "comments", label: "Cover letter"}
+    path: materials.cover_letter_text
