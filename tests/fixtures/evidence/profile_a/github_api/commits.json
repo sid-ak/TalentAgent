@@ -1,0 +1,26 @@
+[
+  {
+    "sha": "c0ffee1",
+    "commit": {
+      "author": {
+        "name": "Test Engineer",
+        "email": "engineer@example.com",
+        "date": "2025-04-10T10:00:00Z"
+      },
+      "message": "feat: optimize ingest worker batching and routing"
+    },
+    "html_url": "https://github.com/example/talentagent-repo/commit/c0ffee1"
+  },
+  {
+    "sha": "c0ffee2",
+    "commit": {
+      "author": {
+        "name": "Test Engineer",
+        "email": "engineer@example.com",
+        "date": "2025-05-12T14:00:00Z"
+      },
+      "message": "feat: add distributed tracing middleware for microservices"
+    },
+    "html_url": "https://github.com/example/talentagent-repo/commit/c0ffee2"
+  }
+]

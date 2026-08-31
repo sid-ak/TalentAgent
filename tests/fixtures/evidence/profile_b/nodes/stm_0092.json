@@ -1,0 +1,13 @@
+{
+  "id": "stm_0092",
+  "statement": {
+    "raw": "led cross-functional quarterly planning for 45 stakeholders across product, design, and operations",
+    "elicited_by": "gap:req_stakeholders",
+    "asserted_at": "2026-08-14",
+    "artifact_producible": false
+  },
+  "period": {
+    "start": "2025-06",
+    "end": "2025-12"
+  }
+}

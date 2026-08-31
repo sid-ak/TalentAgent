@@ -1,0 +1,11 @@
+{
+  "id": "art_pr_412",
+  "subtype": "pr",
+  "title": "PR #412: Tiered classification routing",
+  "url": "https://github.com/example/talentagent-repo/pull/412",
+  "source": "github:example/talentagent-repo",
+  "period": {
+    "start": "2025-03",
+    "end": "2025-04"
+  }
+}

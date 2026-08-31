@@ -1,0 +1,16 @@
+[
+  {
+    "number": 412,
+    "title": "Tiered classification routing for p99 latency reduction",
+    "body": "Implements two-tier message classification. Reduces p99 latency by 62% in benchmarks.",
+    "html_url": "https://github.com/example/talentagent-repo/pull/412",
+    "merged_at": "2025-04-15T12:00:00Z"
+  },
+  {
+    "number": 419,
+    "title": "Pub/Sub batch ingestion pipeline",
+    "body": "Connects high-throughput event subscriber with backpressure handling.",
+    "html_url": "https://github.com/example/talentagent-repo/pull/419",
+    "merged_at": "2025-05-01T16:30:00Z"
+  }
+]

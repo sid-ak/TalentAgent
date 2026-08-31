@@ -1,0 +1,8 @@
+{"source_id": "art_pr_412", "source_type": "artifact", "target_id": "acc_7f21", "target_type": "accomplishment", "edge_type": "evidences"}
+{"source_id": "art_pr_419", "source_type": "artifact", "target_id": "acc_7f21", "target_type": "accomplishment", "edge_type": "evidences"}
+{"source_id": "art_doc_design", "source_type": "artifact", "target_id": "acc_7f21", "target_type": "accomplishment", "edge_type": "evidences"}
+{"source_id": "acc_7f21", "source_type": "accomplishment", "target_id": "skill_python", "target_type": "skill", "edge_type": "demonstrates"}
+{"source_id": "acc_7f21", "source_type": "accomplishment", "target_id": "skill_pubsub", "target_type": "skill", "edge_type": "demonstrates"}
+{"source_id": "art_commit_01", "source_type": "artifact", "target_id": "acc_1c04", "target_type": "accomplishment", "edge_type": "evidences"}
+{"source_id": "acc_1c04", "source_type": "accomplishment", "target_id": "skill_python", "target_type": "skill", "edge_type": "demonstrates"}
+{"source_id": "acc_1c04", "source_type": "accomplishment", "target_id": "skill_distributed_systems", "target_type": "skill", "edge_type": "demonstrates"}

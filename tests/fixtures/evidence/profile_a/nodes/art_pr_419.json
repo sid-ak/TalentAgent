@@ -1,0 +1,11 @@
+{
+  "id": "art_pr_419",
+  "subtype": "pr",
+  "title": "PR #419: Pub/Sub batch ingestion pipeline",
+  "url": "https://github.com/example/talentagent-repo/pull/419",
+  "source": "github:example/talentagent-repo",
+  "period": {
+    "start": "2025-04",
+    "end": "2025-05"
+  }
+}

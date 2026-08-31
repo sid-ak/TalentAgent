@@ -1,0 +1,11 @@
+{
+  "id": "art_commit_01",
+  "subtype": "commit",
+  "title": "Commit c0ffee2: Distributed tracing middleware",
+  "url": "https://github.com/example/talentagent-repo/commit/c0ffee2",
+  "source": "github:example/talentagent-repo",
+  "period": {
+    "start": "2025-05",
+    "end": "2025-05"
+  }
+}

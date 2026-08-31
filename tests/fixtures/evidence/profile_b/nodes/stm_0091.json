@@ -1,0 +1,13 @@
+{
+  "id": "stm_0091",
+  "statement": {
+    "raw": "i ran the customer onboarding redesign last year across 6 regional teams, improving activation rate by 28%",
+    "elicited_by": "gap:req_onboarding",
+    "asserted_at": "2026-08-14",
+    "artifact_producible": false
+  },
+  "period": {
+    "start": "2025-01",
+    "end": "2025-06"
+  }
+}
