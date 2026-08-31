@@ -18,6 +18,7 @@ from urllib.parse import parse_qs, urlparse
 
 import pypdf
 
+from talentagent.agent.loop import extract_requirements, run_agent
 from talentagent.ats.fieldmap import load_map
 from talentagent.composer.compose import compose_package
 from talentagent.composer.package import Identity, Links, Materials
@@ -25,30 +26,28 @@ from talentagent.evidence.elicitation import promote_statement
 from talentagent.evidence.graph import (
     Accomplishment,
     Artifact,
-    ArtifactSubtype,
     AttestationClass,
-    Edge,
-    EdgeType,
     Metric,
-    NodeType,
     Skill,
     Statement,
 )
 from talentagent.evidence.retrieval import _KNOWN_SKILL_KEYWORDS, normalise_requirement
 from talentagent.evidence.store import EvidenceStore, LocalEvidenceStore
-from talentagent.models.live import get_live_client
+from talentagent.models.client import Tier
+from talentagent.models.live import TIER_MODELS, build_live_client
 
 DEFAULT_PORT = 8080
 """Default HTTP port for the UI review server."""
 
-DAILY_TIER_1_QUOTA = 1000
-"""Daily free-tier quota ceiling for Flash-Lite tier 1 requests (ADR-0012)."""
+MODEL_CLIENT = build_live_client()
+"""The live Gemini client, or None when no API key is configured.
 
-DAILY_TIER_2_QUOTA = 250
-"""Daily free-tier quota ceiling for Flash tier 2 requests (ADR-0012)."""
+Built once at import: the whole surface either has a model or reports that it does not, and
+every handler reads the same answer.
+"""
 
 WEB_DIR = Path(__file__).resolve().parent.parent.parent / "web"
-"""Path to static assets for the Angular review UI."""
+"""Path to the static review surface served alongside the API."""
 
 
 def get_all_nodes(store: EvidenceStore) -> list[Any]:
@@ -116,9 +115,6 @@ class CandidateSession:
         self.materials = Materials()
         self.resume_filename: str | None = None
 
-        self.tier_1_calls = 0
-        self.tier_2_calls = 0
-
     def reset(self) -> None:
         """Reset the session store and candidate state."""
         self._tmp_dir = tempfile.mkdtemp(prefix="talentagent_candidate_")
@@ -134,7 +130,15 @@ GLOBAL_SESSION = CandidateSession()
 
 
 class TalentAgentUIHandler(http.server.BaseHTTPRequestHandler):
-    """HTTP request handler serving REST API endpoints and static Angular UI assets."""
+    """HTTP request handler serving REST API endpoints and the static review surface."""
+
+    protocol_version = "HTTP/1.1"
+    """Keep connections alive between requests.
+
+    Every response here sets `Content-Length`, which is what HTTP/1.1 needs to find the end of a
+    body. Under the 1.0 default a browser reopens a connection per call, and an agent run — which
+    is several seconds of model calls — can be left waiting on one that was already closed.
+    """
 
     def log_message(self, format_str: str, *args: Any) -> None:
         """Suppress standard access logs to keep console output clean."""
@@ -198,10 +202,10 @@ class TalentAgentUIHandler(http.server.BaseHTTPRequestHandler):
             self._handle_upload_resume(body)
         elif path == "/api/profile/add-statement":
             self._handle_add_statement(body)
-        elif path == "/api/profile/sync-github":
-            self._handle_sync_github(body)
         elif path == "/api/profile/reset":
             self._handle_reset_profile()
+        elif path == "/api/agent/run":
+            self._handle_agent_run(body)
         elif path == "/api/extract-requirements":
             self._handle_extract_requirements(body)
         elif path == "/api/compose":
@@ -215,14 +219,22 @@ class TalentAgentUIHandler(http.server.BaseHTTPRequestHandler):
 
     def _handle_status(self) -> None:
         """Return system health, guardrails status, and zero-budget quota usage."""
-        has_gemini = get_live_client() is not None
+        quotas = (
+            MODEL_CLIENT.ledger.report()
+            if MODEL_CLIENT is not None
+            else {t.value: {"used": 0, "limit": t.daily_limit} for t in Tier}
+        )
         self._send_json(
             200,
             {
                 "status": "healthy",
                 "system": "TalentAgent",
                 "backend": "python",
-                "gemini_connected": has_gemini,
+                "gemini_connected": MODEL_CLIENT is not None,
+                "models": {
+                    "tier_1": TIER_MODELS[Tier.ONE][0],
+                    "tier_2": TIER_MODELS[Tier.TWO][0],
+                },
                 "guardrails": {
                     "G1": {"name": "No model-originated claims", "active": True},
                     "G2": {"name": "No uncredited lines", "active": True},
@@ -232,12 +244,7 @@ class TalentAgentUIHandler(http.server.BaseHTTPRequestHandler):
                     "G6": {"name": "No credential handling", "active": True},
                     "G7": {"name": "Untrusted content treated as data", "active": True},
                 },
-                "quotas": {
-                    "tier_1_used": GLOBAL_SESSION.tier_1_calls,
-                    "tier_1_limit": DAILY_TIER_1_QUOTA,
-                    "tier_2_used": GLOBAL_SESSION.tier_2_calls,
-                    "tier_2_limit": DAILY_TIER_2_QUOTA,
-                },
+                "quotas": quotas,
                 "platforms": ["greenhouse", "lever", "ashby"],
             },
         )
@@ -343,23 +350,42 @@ class TalentAgentUIHandler(http.server.BaseHTTPRequestHandler):
         )
 
     def _handle_extract_requirements(self, body: dict[str, Any]) -> None:
-        """Parse raw job posting text into structured requirement items."""
+        """Extract structured requirements from a posting via the tier-1 model."""
         posting_text = body.get("posting_text", "").strip()
         if not posting_text:
             self._send_error(400, "Empty posting text")
             return
 
-        GLOBAL_SESSION.tier_1_calls += 1
-        lines = [line.strip("-•* ").strip() for line in posting_text.splitlines() if line.strip()]
-        reqs = []
-        for line in lines:
-            if len(line) > 15 and not line.endswith(":"):
-                reqs.append(line)
+        requirements, used_model = extract_requirements(posting_text, MODEL_CLIENT)
+        self._send_json(
+            200,
+            {
+                "requirements": [r.text for r in requirements],
+                "used_model": used_model,
+            },
+        )
 
-        if not reqs:
-            reqs = [posting_text[:140]]
+    def _handle_agent_run(self, body: dict[str, Any]) -> None:
+        """Run the agent loop over a posting and return its trace, package, and open gaps."""
+        posting_text = body.get("posting_text", "").strip()
+        if not posting_text:
+            self._send_error(400, "Empty posting text")
+            return
 
-        self._send_json(200, {"requirements": reqs[:10]})
+        if not get_all_nodes(GLOBAL_SESSION.store):
+            self._send_error(400, "No evidence yet. Add your experience before running the agent.")
+            return
+
+        run = run_agent(
+            posting_text=posting_text,
+            store=GLOBAL_SESSION.store,
+            identity=GLOBAL_SESSION.identity,
+            links=GLOBAL_SESSION.links,
+            materials=GLOBAL_SESSION.materials,
+            model_client=MODEL_CLIENT,
+            posting_id=body.get("posting_id", "target_posting"),
+        )
+        self._send_json(200, json.loads(run.model_dump_json()))
 
     def _handle_compose(self, body: dict[str, Any]) -> None:
         """Execute Pass 1 credited package composition against candidate evidence store."""
@@ -373,7 +399,6 @@ class TalentAgentUIHandler(http.server.BaseHTTPRequestHandler):
 
         requirements = [normalise_requirement(r) for r in reqs_raw] if reqs_raw else []
 
-        GLOBAL_SESSION.tier_2_calls += 1
         package = compose_package(
             posting_id=posting_id,
             requirements=requirements,
@@ -381,6 +406,7 @@ class TalentAgentUIHandler(http.server.BaseHTTPRequestHandler):
             store=GLOBAL_SESSION.store,
             links=GLOBAL_SESSION.links,
             materials=GLOBAL_SESSION.materials,
+            model_client=MODEL_CLIENT,
         )
 
         self._send_json(200, {"package": package.model_dump()})
@@ -483,69 +509,6 @@ class TalentAgentUIHandler(http.server.BaseHTTPRequestHandler):
                 "statement_id": stmt.id,
                 "accomplishment_id": acc.id,
                 "attestation_class": "attested",
-            },
-        )
-
-    def _handle_sync_github(self, body: dict[str, Any]) -> None:
-        """Ingest repository artifacts into candidate evidence store."""
-        username = body.get("username", "developer").strip()
-        repo = body.get("repo", "project").strip()
-
-        art_id = f"art_gh_{abs(hash(username + repo)) % 1000000:06d}"
-        art = Artifact(
-            id=art_id,
-            subtype=ArtifactSubtype.PR,
-            title=f"Core architectural contributions to {username}/{repo}",
-            url=f"https://github.com/{username}/{repo}",
-            metadata={"summary": f"Contributions and fixtures for {repo}."},
-        )
-        GLOBAL_SESSION.store.save_node(art)
-
-        matched_skills = _extract_and_save_skills(
-            GLOBAL_SESSION.store, f"GitHub repository {username}/{repo} infrastructure"
-        )
-        if not matched_skills:
-            matched_skills = _extract_and_save_skills(
-                GLOBAL_SESSION.store, "python distributed systems"
-            )
-
-        acc_id = f"acc_gh_{abs(hash(username + repo)) % 1000000:06d}"
-        acc = Accomplishment(
-            id=acc_id,
-            claim=f"Built core services and infrastructure for {username}/{repo}",
-            skills=matched_skills,
-            evidence=[art_id],
-            attestation_class=AttestationClass.VERIFIABLE,
-        )
-        GLOBAL_SESSION.store.save_node(acc)
-
-        GLOBAL_SESSION.store.save_edge(
-            Edge(
-                source_id=art_id,
-                source_type=NodeType.ARTIFACT,
-                target_id=acc_id,
-                target_type=NodeType.ACCOMPLISHMENT,
-                edge_type=EdgeType.EVIDENCES,
-            )
-        )
-        for sk_id in matched_skills:
-            GLOBAL_SESSION.store.save_edge(
-                Edge(
-                    source_id=acc_id,
-                    source_type=NodeType.ACCOMPLISHMENT,
-                    target_id=sk_id,
-                    target_type=NodeType.SKILL,
-                    edge_type=EdgeType.DEMONSTRATES,
-                )
-            )
-
-        self._send_json(
-            200,
-            {
-                "status": "synced",
-                "artifact_id": art_id,
-                "accomplishment_id": acc_id,
-                "attestation_class": "verifiable",
             },
         )
 

@@ -45,6 +45,17 @@ def _no_network(request: pytest.FixtureRequest) -> Iterator[None]:
         socket.socket = original  # type: ignore[misc]
 
 
+@pytest.fixture(autouse=True)
+def _no_live_model(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Pin the UI server's model client to None for every test.
+
+    The server builds a live client at import when a `GEMINI_API_KEY` is present, so without
+    this a developer with a key configured would run a different suite from CI. Tests that mean
+    to exercise a model inject their own client (ADR-0012).
+    """
+    monkeypatch.setattr("talentagent.ui.server.MODEL_CLIENT", None)
+
+
 @pytest.fixture
 def package(tmp_path: Path) -> ApplicationPackage:
     """A package with every field a Phase 1 field map can reference populated."""
