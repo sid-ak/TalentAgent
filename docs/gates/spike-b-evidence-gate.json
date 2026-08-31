@@ -1,0 +1,10 @@
+{
+  "total_adversarial_requirements": 10,
+  "adversarial_gaps_emitted": 10,
+  "adversarial_uncredited_claims": 0,
+  "adversarial_derived_leaks": 0,
+  "profile_b_total_bullets": 2,
+  "profile_b_attested_fraction": 1.0,
+  "profile_b_verifiable_fraction": 0.0,
+  "gate_passed": true
+}
