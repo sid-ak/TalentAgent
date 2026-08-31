@@ -10,11 +10,12 @@ from collections.abc import Iterator
 from pathlib import Path
 
 import pytest
-from talentagent.ats.package import ApplicationPackage, Identity, Links, Materials
+from talentagent.composer.package import ApplicationPackage, Identity, Links, Materials
 
-#: Where the offline ATS forms live. Shared so both the Pass 2 suite and the worker suite point at
-#: one copy rather than each carrying its own path.
 ATS_FIXTURES = Path(__file__).parent / "fixtures" / "ats"
+"""Where the offline ATS forms live. Shared so both the Pass 2 suite and the worker suite point at
+one copy rather than each carrying its own path.
+"""
 
 
 class NetworkAccessDenied(RuntimeError):

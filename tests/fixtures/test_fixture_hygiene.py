@@ -12,10 +12,12 @@ import pytest
 
 FIXTURE_ROOT = Path(__file__).parent
 
-#: Addresses that are reserved for documentation are fine; anything else that looks like a real
-#: mailbox is not.
 _EMAIL = re.compile(r"[\w.+-]+@(?!example\.(com|org)\b|test\b)[\w-]+\.[a-z]{2,}", re.I)
-_PHONE = re.compile(r"(?<!\d)(\+?\d[\d\-\s().]{8,}\d)(?!\d)")
+"""Addresses that are reserved for documentation are fine; anything else that looks like a real
+mailbox is not.
+"""
+_PHONE = re.compile(r"(?<!\d)(?!(?:19|20)\d{2}-\d{2}-\d{2})(\+?\d[\d\-\s().]{8,}\d)(?!\d)")
+"""Phone number pattern matching formatted numbers while exempting ISO date stamps."""
 _SCRIPTS = re.compile(r"<script\b", re.I)
 _REMOTE_ASSET = re.compile(r'(src|href)\s*=\s*["\']https?://', re.I)
 

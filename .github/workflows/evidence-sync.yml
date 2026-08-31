@@ -1,0 +1,58 @@
+name: evidence-sync
+
+# Scheduled evidence sync job (Spec §8.2, Issue #22).
+#
+# Periodically ingests public work products into the evidence graph, clusters candidate
+# accomplishments (quarantined as DERIVED), and triggers retrospective elicitation on milestones.
+
+on:
+  schedule:
+    - cron: "0 4 * * *"  # Daily at 04:00 UTC
+  workflow_dispatch:
+    inputs:
+      repository:
+        description: "Target repository to sync (owner/repo)"
+        required: false
+        default: "example/talentagent-repo"
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: evidence-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    name: Sync evidence
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          version: "0.5.11"
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+
+      - name: Sync dependencies
+        run: uv sync --locked --extra dev
+
+      - name: Execute sync job
+        id: sync
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          FIRESTORE_CREDENTIALS: ${{ secrets.FIRESTORE_CREDENTIALS }}
+          TARGET_REPO: ${{ inputs.repository || 'example/talentagent-repo' }}
+        run: |
+          uv run python -m talentagent.jobs.evidence_sync             --repo "$TARGET_REPO"             --work artifacts/evidence_sync
+
+      - name: Retain sync report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: evidence-sync-report
+          path: artifacts/evidence_sync/
+          retention-days: 90

@@ -1,0 +1,11 @@
+{
+  "id": "art_doc_design",
+  "subtype": "doc",
+  "title": "Design Doc: Ingest Architecture & SLA Scaling",
+  "url": "https://github.com/example/talentagent-repo/blob/main/docs/ingest.md",
+  "source": "github:example/talentagent-repo",
+  "period": {
+    "start": "2025-03",
+    "end": "2025-03"
+  }
+}

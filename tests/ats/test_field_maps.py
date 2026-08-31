@@ -12,8 +12,8 @@ import pytest
 import yaml
 from talentagent.ats.fieldmap import MissReason, load_map
 from talentagent.ats.offline import OfflineHtmlPage
-from talentagent.ats.package import ApplicationPackage
 from talentagent.ats.resolver import resolve
+from talentagent.composer.package import ApplicationPackage
 
 from tests.conftest import ATS_FIXTURES
 

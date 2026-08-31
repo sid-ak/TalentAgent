@@ -1,0 +1,24 @@
+{
+  "id": "acc_1c04",
+  "claim": "Implemented distributed tracing across microservices",
+  "skills": [
+    "skill_python",
+    "skill_distributed_systems"
+  ],
+  "metrics": [
+    {
+      "name": "services_instrumented",
+      "value": 12,
+      "unit": "count",
+      "basis": "repo commits"
+    }
+  ],
+  "evidence": [
+    "art_commit_01"
+  ],
+  "class": "verifiable",
+  "period": {
+    "start": "2025-05",
+    "end": "2025-06"
+  }
+}

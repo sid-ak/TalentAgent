@@ -1,0 +1,29 @@
+{
+  "id": "acc_2b88",
+  "claim": "Redesigned customer onboarding flow across regional teams",
+  "skills": [
+    "skill_product_strategy"
+  ],
+  "metrics": [
+    {
+      "name": "activation_rate",
+      "delta": 0.28,
+      "unit": "ratio",
+      "basis": "user-stated"
+    }
+  ],
+  "evidence": [
+    "stm_0091"
+  ],
+  "class": "attested",
+  "statement": {
+    "raw": "i ran the customer onboarding redesign last year across 6 regional teams, improving activation rate by 28%",
+    "elicited_by": "gap:req_onboarding",
+    "asserted_at": "2026-08-14",
+    "artifact_producible": false
+  },
+  "period": {
+    "start": "2025-01",
+    "end": "2025-06"
+  }
+}

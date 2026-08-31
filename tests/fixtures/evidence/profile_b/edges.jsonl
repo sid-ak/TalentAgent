@@ -1,0 +1,4 @@
+{"source_id": "stm_0091", "source_type": "statement", "target_id": "acc_2b88", "target_type": "accomplishment", "edge_type": "evidences"}
+{"source_id": "acc_2b88", "source_type": "accomplishment", "target_id": "skill_product_strategy", "target_type": "skill", "edge_type": "demonstrates"}
+{"source_id": "stm_0092", "source_type": "statement", "target_id": "acc_3c99", "target_type": "accomplishment", "edge_type": "evidences"}
+{"source_id": "acc_3c99", "source_type": "accomplishment", "target_id": "skill_stakeholder_management", "target_type": "skill", "edge_type": "demonstrates"}

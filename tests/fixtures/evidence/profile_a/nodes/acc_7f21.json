@@ -1,0 +1,28 @@
+{
+  "id": "acc_7f21",
+  "claim": "Cut p99 ingest latency by tiering the classifier",
+  "skills": [
+    "skill_pubsub",
+    "skill_python"
+  ],
+  "metrics": [
+    {
+      "name": "p99_latency",
+      "delta": -0.62,
+      "unit": "ratio",
+      "basis": "prod dashboard, 30d"
+    }
+  ],
+  "evidence": [
+    "art_pr_412",
+    "art_pr_419",
+    "art_doc_design"
+  ],
+  "class": "verifiable",
+  "period": {
+    "start": "2025-03",
+    "end": "2025-06"
+  },
+  "confidence": 0.91,
+  "derived_by": "evidence@2026-08-14T03:12Z"
+}

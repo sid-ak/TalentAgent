@@ -24,8 +24,8 @@ from typing import Any
 from talentagent.ats.completion import Completion
 from talentagent.ats.executor import FillResult
 from talentagent.ats.fallback import BoundedFallback
-from talentagent.ats.package import ApplicationPackage
 from talentagent.ats.page import FALLBACK_SOURCE, Page
+from talentagent.composer.package import ApplicationPackage
 
 SCREENSHOT = "form.png"
 """Filenames inside a capture directory. Fixed so the review UI can find them without a manifest."""

@@ -1,4 +1,4 @@
-"""G1, G2, G4, and G6: invariants whose enforcement arrives in a later phase.
+"""G4 and G6: invariants whose enforcement arrives in a later phase.
 
 Held here as xfail so the suite is a complete map of Spec 10 from the start. An invariant that is
 only added to the suite when its code lands is an invariant nobody notices is missing.
@@ -7,18 +7,6 @@ only added to the suite when its code lands is an invariant nobody notices is mi
 import pytest
 
 pytestmark = pytest.mark.guardrail
-
-
-@pytest.mark.xfail(reason="G1: derived quarantine arrives with issue #21", strict=True)
-def test_g1_no_model_originated_claim_reaches_an_employer() -> None:
-    """No accomplishment of class `derived` can be selected by the composer."""
-    raise AssertionError("not yet enforced")
-
-
-@pytest.mark.xfail(reason="G2: package schema validation arrives with issue #25", strict=True)
-def test_g2_no_generated_line_without_a_credit() -> None:
-    """Every generated line carries at least one credit resolving to an admissible node."""
-    raise AssertionError("not yet enforced")
 
 
 @pytest.mark.xfail(reason="G4: ranking-layer check arrives with issue #43", strict=True)

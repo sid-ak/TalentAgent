@@ -20,9 +20,9 @@ from talentagent.ats.executor import FillResult, FormHalted, fill_form
 from talentagent.ats.fallback import BoundedFallback
 from talentagent.ats.fieldmap import FieldMap, load_map
 from talentagent.ats.halt import HaltedRun
-from talentagent.ats.package import ApplicationPackage
 from talentagent.ats.page import Page
 from talentagent.ats.platforms import UnsupportedPlatform, platform_for
+from talentagent.composer.package import ApplicationPackage
 from talentagent.models.client import GoldenResponseMissing, ModelClient, QuotaExhausted
 from talentagent.net.fetch import Fetcher
 from talentagent.state.packages import PackageStore
