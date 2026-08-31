@@ -55,13 +55,21 @@ jobs:
         id: fill
         env:
           # Actions secrets only. Nothing is committed; the repository is public
-          # (Architecture 6.4).
+          # (Architecture 6.4). The Gemini key is exported ahead of the live transport it will
+          # feed (issue #18); until that lands, a question no recording covers degrades the run
+          # rather than failing it.
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           FIRESTORE_CREDENTIALS: ${{ secrets.FIRESTORE_CREDENTIALS }}
+          # The dispatch inputs reach the shell as environment variables rather than being
+          # interpolated into the script. Interpolation would splice caller-supplied text into a
+          # command line that also holds these secrets, which is the Actions script-injection
+          # pattern; a variable expansion cannot be escaped out of.
+          APPLICATION_ID: ${{ inputs.application_id }}
+          POSTING_URL: ${{ inputs.posting_url }}
         run: |
           uv run python -m talentagent.jobs.form_worker \
-            --application-id "${{ inputs.application_id }}" \
-            --posting-url "${{ inputs.posting_url }}" \
+            --application-id "$APPLICATION_ID" \
+            --posting-url "$POSTING_URL" \
             --artifacts artifacts
 
       - name: Retain the capture

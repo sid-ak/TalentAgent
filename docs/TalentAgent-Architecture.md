@@ -294,6 +294,8 @@ No component reads, stores, or transmits a password, and no code path creates an
 
 Network-layer egress restriction is not available on Actions runners or Apps Script. Guardrail G5 therefore moves from an infrastructure control to an application-layer allowlist check in the fetch wrapper, asserted in tests. This is a genuine weakening relative to the Cloud Run design and is the clearest reason to migrate if credits later become available (§10).
 
+The check covers every read the system makes: a posting URL is checked before the browser starts, so an out-of-scope host costs nothing. It does not, and cannot, cover what a rendered page then fetches for itself. Once Chromium loads a permitted posting, that page's own scripts, images, and frames are requests the browser makes on the page's behalf, below the level any application-layer wrapper can see. G5 is a statement about where the system chooses to look, not a sandbox around the renderer; the containment that matters for a rendered page is G7, which keeps its content in data fields and out of instruction context.
+
 ### 6.3 Untrusted input
 
 Unchanged. Postings, inbound messages, and ATS page content are third-party text, entering as data fields and never as instruction context. Detected injection attempts are logged and the workflow instance halts.

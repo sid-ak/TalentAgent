@@ -102,8 +102,9 @@ application that produced it — so a later regeneration can never be mistaken f
 filled.
 
 If the run goes wrong it still produces all of this. A form that changed shape halts the run, and
-the capture names the field it stopped on, with the partial fill intact. Losing the run is
-acceptable; losing the evidence of what went wrong is not.
+the capture names the field it stopped on, with the partial fill intact and the completion figure
+reporting how far it actually got rather than rounding a failure up to a finished form. Losing the
+run is acceptable; losing the evidence of what went wrong is not.
 
 ## What the numbers say
 

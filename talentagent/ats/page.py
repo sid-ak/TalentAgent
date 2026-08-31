@@ -15,6 +15,11 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Protocol, runtime_checkable
 
+FALLBACK_SOURCE = "fallback"
+"""The source recorded for a field the bounded model fallback answered. Named once so the completion
+figure and the capture agree on which written values were not deterministic.
+"""
+
 
 @dataclass(frozen=True)
 class FormField:
@@ -94,3 +99,7 @@ class FillLog:
     def record(self, name: str, value: str, source: str) -> None:
         """Note that `value` was written into `name` from `source`."""
         self.values.append(FilledValue(name=name, value=value, source=source))
+
+    def sources(self) -> dict[str, str]:
+        """Return each field that holds a value, mapped to the source that supplied it."""
+        return {value.name: value.source for value in self.values}

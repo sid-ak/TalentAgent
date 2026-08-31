@@ -69,3 +69,22 @@ def package(tmp_path: Path) -> ApplicationPackage:
             resume=resume, cover_letter=cover, cover_letter_text="A short cover letter."
         ),
     )
+
+
+@pytest.fixture
+def changed_form(tmp_path: Path) -> Path:
+    """A Greenhouse form whose email field has become a select the package's value cannot satisfy.
+
+    The DOM change ADR-0008 expects a map to notice rather than work around, shared by every test
+    that pins what a halt does.
+    """
+    source = ATS_FIXTURES / "greenhouse" / "plain.html"
+    changed = tmp_path / "plain.html"
+    changed.write_text(
+        source.read_text().replace(
+            '<input type="email" id="email" name="job_application[email]" required>',
+            '<select id="email" name="job_application[email]">'
+            '<option value="a@example.com">a</option></select>',
+        )
+    )
+    return changed

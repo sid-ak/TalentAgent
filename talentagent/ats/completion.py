@@ -20,10 +20,17 @@ changed its DOM and the fallback is quietly papering over it.
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass
 
 from talentagent.ats.fieldmap import MissReason
+from talentagent.ats.page import FALLBACK_SOURCE
 from talentagent.ats.resolver import Resolution
+
+FILLABLE_MISSES = (MissReason.NO_RULE, MissReason.NO_VALUE)
+"""The misses that still describe a field which should hold a value, and so stay in the
+denominator. The other two reasons are the two exclusions above.
+"""
 
 
 @dataclass(frozen=True)
@@ -51,7 +58,12 @@ class Completion:
 
     @property
     def rate(self) -> float:
-        """Return the share of fillable fields that were filled. This is the Spike A figure."""
+        """Return the share of fillable fields that were filled. This is the Spike A figure.
+
+        A form with nothing to fill is complete, which is why an empty figure reads as 1.0. That
+        makes an empty `Completion` a dangerous stand-in for a run that failed, so a halted run
+        reports what it actually filled instead (`from_fill`, and `HaltedRun.partial`).
+        """
         return (self.by_map + self.by_fallback) / self.fillable if self.fillable else 1.0
 
     @property
@@ -79,17 +91,27 @@ class Completion:
 ZERO = Completion()
 
 
-def from_resolution(resolution: Resolution) -> Completion:
-    """Compute the figure for a form the map has resolved but the fallback has not yet touched.
+def from_fill(resolution: Resolution, written: Mapping[str, str]) -> Completion:
+    """Compute the figure for a form as it stands, from the values actually written into it.
 
-    Every unmatched field counts as unfilled here, which is the honest reading before the fallback
-    runs. The executor replaces those it answers (issue #15).
+    Args:
+        resolution: The form re-resolved after the fill, so revealed conditionals are counted.
+        written: Each field that holds a value, mapped to the source that supplied it — a package
+            path, or `fallback` for a model-answered field.
+
+    Counted from what was written rather than from the resolution alone, because the two differ
+    exactly when something went wrong: a field the map resolved but the page then refused holds no
+    value, and counting it as filled is how a halted run comes to report itself complete.
     """
+    fillable = {item.name for item in resolution.resolved} | {
+        miss.name for miss in resolution.missed if miss.reason in FILLABLE_MISSES
+    }
+    sources = {name: source for name, source in written.items() if name in fillable}
+    by_fallback = sum(1 for source in sources.values() if source == FALLBACK_SOURCE)
     return Completion(
-        by_map=len(resolution.resolved),
-        by_fallback=0,
-        unfilled=len(resolution.misses_by_reason(MissReason.NO_RULE))
-        + len(resolution.misses_by_reason(MissReason.NO_VALUE)),
+        by_map=len(sources) - by_fallback,
+        by_fallback=by_fallback,
+        unfilled=len(fillable - set(sources)),
         declined=len(resolution.misses_by_reason(MissReason.DECLARED_UNMAPPED)),
         not_visible=len(resolution.misses_by_reason(MissReason.NOT_VISIBLE)),
     )

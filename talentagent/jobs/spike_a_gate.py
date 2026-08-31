@@ -12,11 +12,11 @@ import sys
 from pathlib import Path
 
 from talentagent.ats.capture import build_capture, write_capture
-from talentagent.ats.completion import ZERO
-from talentagent.ats.executor import FillResult, FormHalted, fill_form
+from talentagent.ats.executor import fill_form
 from talentagent.ats.fallback import BoundedFallback
 from talentagent.ats.fieldmap import load_map
 from talentagent.ats.gate import THRESHOLD, GateReport, report_from_captures
+from talentagent.ats.halt import HaltedRun
 from talentagent.ats.offline import OfflineHtmlPage
 from talentagent.ats.package import ApplicationPackage, Identity, Links, Materials
 from talentagent.models.client import ModelCall, ModelClient
@@ -83,8 +83,10 @@ def run_all(work: Path, fixture_root: Path = FIXTURE_ROOT) -> GateReport:
             halted: str | None = None
             try:
                 result = fill_form(page, load_map(platform), package, answer_unmatched=fallback)
-            except FormHalted as exc:  # pragma: no cover - fixtures are not expected to halt
-                halted, result = str(exc), FillResult(completion=ZERO)
+            except HaltedRun as exc:  # pragma: no cover - fixtures are not expected to halt
+                # Measured from the partial fill rather than from an empty figure: a fixture that
+                # halts should pull its platform's completion down, not read as a clean 100%.
+                halted, result = str(exc), exc.partial_fill()
             capture = build_capture(
                 f"{platform}/{fixture.stem}", platform, result, fallback, halted
             )
