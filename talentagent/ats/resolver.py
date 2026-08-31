@@ -10,8 +10,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from talentagent.ats.fieldmap import FieldMap, MissReason
-from talentagent.ats.package import ApplicationPackage
 from talentagent.ats.page import FormField
+from talentagent.composer.package import ApplicationPackage
 
 
 @dataclass(frozen=True)

@@ -86,6 +86,27 @@ def normalise_requirement(
     )
 
 
+def score_candidate(requirement: NormalizedRequirement, cand: Accomplishment) -> float:
+    """Score an individual candidate against a normalized requirement."""
+    req_skills_set = set(requirement.skills)
+    cand_skills_set = set(cand.skills)
+    matched_skills = req_skills_set.intersection(cand_skills_set)
+
+    skill_coverage = len(matched_skills) / len(req_skills_set) if req_skills_set else 0.8
+    score = skill_coverage * 0.7
+
+    if cand.metrics:
+        score += 0.2
+
+    multiplier = 1.0
+    if cand.attestation_class == AttestationClass.CORROBORATED:
+        multiplier = 0.95
+    elif cand.attestation_class == AttestationClass.ATTESTED:
+        multiplier = 0.90
+
+    return min(1.0, score * multiplier)
+
+
 def calculate_sufficiency(
     requirement: NormalizedRequirement,
     candidates: list[Accomplishment],
@@ -97,36 +118,9 @@ def calculate_sufficiency(
     if not candidates:
         return 0.0
 
-    # Score each candidate deterministically
-    req_skills_set = set(requirement.skills)
-    best_candidate_score = 0.0
+    scores = [score_candidate(requirement, c) for c in candidates]
+    best_candidate_score = max(scores)
 
-    for cand in candidates:
-        cand_skills_set = set(cand.skills)
-        matched_skills = req_skills_set.intersection(cand_skills_set)
-
-        # Skill match fraction
-        skill_coverage = len(matched_skills) / len(req_skills_set) if req_skills_set else 0.8
-
-        # Base candidate quality
-        score = skill_coverage * 0.7
-
-        # Metrics bonus
-        if cand.metrics:
-            score += 0.2
-
-        # Attestation multiplier
-        multiplier = 1.0
-        if cand.attestation_class == AttestationClass.CORROBORATED:
-            multiplier = 0.95
-        elif cand.attestation_class == AttestationClass.ATTESTED:
-            multiplier = 0.90
-
-        total_cand_score = min(1.0, score * multiplier)
-        if total_cand_score > best_candidate_score:
-            best_candidate_score = total_cand_score
-
-    # Multi-candidate synergy bonus (up to +0.1 for 2+ independent supporting accomplishments)
     if len(candidates) > 1 and best_candidate_score > 0.0:
         best_candidate_score = min(1.0, best_candidate_score + 0.05)
 
@@ -163,8 +157,8 @@ def query_evidence(
                 candidates.append(acc)
                 seen_ids.add(acc.id)
 
-    # Sort candidates deterministically by ID
-    candidates.sort(key=lambda a: a.id)
+    # Sort candidates deterministically by score descending, then by ID
+    candidates.sort(key=lambda a: (-score_candidate(norm_req, a), a.id))
 
     sufficiency = calculate_sufficiency(norm_req, candidates)
     classes = [c.attestation_class for c in candidates]

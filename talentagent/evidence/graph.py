@@ -10,7 +10,7 @@ from __future__ import annotations
 import enum
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field, field_validator
 
 
 class NodeType(enum.Enum):
@@ -222,7 +222,7 @@ class Accomplishment(BaseModel):
     )
     attestation_class: AttestationClass = Field(
         ...,
-        validation_alias="class",
+        validation_alias=AliasChoices("class", "attestation_class"),
         serialization_alias="class",
     )
     period: EvidencePeriod | None = None

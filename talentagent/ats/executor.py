@@ -18,9 +18,9 @@ from pathlib import Path
 from talentagent.ats.completion import Completion, from_fill
 from talentagent.ats.fieldmap import FieldMap, MissReason
 from talentagent.ats.halt import HaltedRun
-from talentagent.ats.package import ApplicationPackage
 from talentagent.ats.page import FALLBACK_SOURCE, FillLog, FormField, Page
 from talentagent.ats.resolver import Missed, resolve
+from talentagent.composer.package import ApplicationPackage
 
 MAX_PASSES = 4
 """How many enumerate-and-fill passes to make before concluding the form has stopped changing.

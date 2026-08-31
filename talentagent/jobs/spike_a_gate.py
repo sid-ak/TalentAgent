@@ -18,7 +18,7 @@ from talentagent.ats.fieldmap import load_map
 from talentagent.ats.gate import THRESHOLD, GateReport, report_from_captures
 from talentagent.ats.halt import HaltedRun
 from talentagent.ats.offline import OfflineHtmlPage
-from talentagent.ats.package import ApplicationPackage, Identity, Links, Materials
+from talentagent.composer.package import ApplicationPackage, Identity, Links, Materials
 from talentagent.models.client import ModelCall, ModelClient
 
 PLATFORMS = ("greenhouse", "lever", "ashby")

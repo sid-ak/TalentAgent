@@ -16,7 +16,7 @@ import json
 from pathlib import Path
 from typing import Protocol, runtime_checkable
 
-from talentagent.ats.package import ApplicationPackage
+from talentagent.composer.package import ApplicationPackage
 
 
 class PackageNotFound(KeyError):

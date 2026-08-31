@@ -6,8 +6,8 @@ import pytest
 from talentagent.ats.executor import FormHalted, fill_form
 from talentagent.ats.fieldmap import load_map
 from talentagent.ats.offline import OfflineHtmlPage
-from talentagent.ats.package import ApplicationPackage
 from talentagent.ats.resolver import Missed
+from talentagent.composer.package import ApplicationPackage
 
 from tests.conftest import ATS_FIXTURES
 

@@ -12,9 +12,9 @@ from talentagent.ats.fieldmap import (
     load_map,
     normalise,
 )
-from talentagent.ats.package import ApplicationPackage
 from talentagent.ats.page import FormField
 from talentagent.ats.resolver import resolve
+from talentagent.composer.package import ApplicationPackage
 
 
 def _write_map(path: Path, body: str) -> Path:

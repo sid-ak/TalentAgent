@@ -27,8 +27,8 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from talentagent.ats.halt import HaltedRun
-from talentagent.ats.package import ApplicationPackage
 from talentagent.ats.resolver import Missed
+from talentagent.composer.package import ApplicationPackage
 from talentagent.models.client import ModelClient
 
 DEFAULT_CONFIDENCE_THRESHOLD = 0.6

@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from talentagent.ats.package import ApplicationPackage
+from talentagent.composer.package import ApplicationPackage
 from talentagent.evidence.graph import (
     Accomplishment,
     Artifact,

@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 import yaml
 from talentagent.ats.offline import OfflineHtmlPage
-from talentagent.ats.package import ApplicationPackage
+from talentagent.composer.package import ApplicationPackage
 from talentagent.jobs.form_worker import UnsupportedPlatform, platform_for, run
 from talentagent.models.client import ModelCall, ModelClient, QuotaExhausted, Tier
 from talentagent.net.fetch import AllowlistViolation, Fetcher

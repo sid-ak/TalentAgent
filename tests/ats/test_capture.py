@@ -9,7 +9,7 @@ from talentagent.ats.executor import FormHalted, fill_form
 from talentagent.ats.fallback import BoundedFallback
 from talentagent.ats.fieldmap import load_map
 from talentagent.ats.offline import OfflineHtmlPage
-from talentagent.ats.package import ApplicationPackage
+from talentagent.composer.package import ApplicationPackage
 from talentagent.models.client import ModelCall, ModelClient
 
 from tests.conftest import ATS_FIXTURES

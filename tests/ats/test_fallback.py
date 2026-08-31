@@ -13,9 +13,9 @@ from talentagent.ats.fallback import (
 )
 from talentagent.ats.fieldmap import MissReason, load_map
 from talentagent.ats.offline import OfflineHtmlPage
-from talentagent.ats.package import ApplicationPackage, ScreeningAnswer
 from talentagent.ats.page import FormField
 from talentagent.ats.resolver import Missed
+from talentagent.composer.package import ApplicationPackage, ScreeningAnswer
 from talentagent.models.client import ModelCall, ModelClient, Tier
 
 from tests.conftest import ATS_FIXTURES

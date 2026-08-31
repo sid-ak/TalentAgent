@@ -3,7 +3,7 @@
 from unittest.mock import MagicMock
 
 import pytest
-from talentagent.ats.package import ApplicationPackage, Identity
+from talentagent.composer.package import ApplicationPackage, Identity
 from talentagent.evidence.graph import (
     Artifact,
     ArtifactSubtype,
