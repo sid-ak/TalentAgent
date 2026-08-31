@@ -16,7 +16,7 @@ from talentagent.pipeline.inbox import (
 
 def _client(response: dict[str, Any]) -> ModelClient:
     """Return a client whose transport answers every call with `response`."""
-    return ModelClient(transport=lambda _call: response, record=False, golden_root=None)  # type: ignore[arg-type]
+    return ModelClient(transport=lambda _call: response, record=False, golden_root=None)
 
 
 class _Recorder:
@@ -61,7 +61,7 @@ def test_a_label_with_no_transition_leaves_the_state_alone() -> None:
 def test_a_label_outside_the_closed_set_cannot_invent_a_state() -> None:
     """A model returning an unknown label is absorbed as irrelevant, not treated as a new class."""
     transport = _Recorder({"messages": [{"index": 0, "label": "promoted_to_ceo"}]})
-    client = ModelClient(transport=transport, record=True, golden_root=None)  # type: ignore[arg-type]
+    client = ModelClient(transport=transport, record=True, golden_root=None)
     reading = read_inbox(["congratulations"], client, ApplicationState.ACKED)
     assert reading.messages[0].label is MessageLabel.IRRELEVANT
     assert reading.final_state is ApplicationState.ACKED
@@ -70,7 +70,7 @@ def test_a_label_outside_the_closed_set_cannot_invent_a_state() -> None:
 def test_the_batch_is_one_call_and_the_text_stays_out_of_the_prompt() -> None:
     """Triage batches to protect the tier-1 allowance, and message text is data only (G7)."""
     transport = _Recorder({"messages": []})
-    client = ModelClient(transport=transport, record=True, golden_root=None)  # type: ignore[arg-type]
+    client = ModelClient(transport=transport, record=True, golden_root=None)
     bodies = ["zebra-alpha-marker", "quokka-beta-marker", "narwhal-gamma-marker"]
     read_inbox(bodies, client, ApplicationState.SUBMITTED)
 
@@ -94,7 +94,7 @@ def test_the_state_machine_walks_messages_in_order() -> None:
             ]
         }
     )
-    client = ModelClient(transport=transport, record=True, golden_root=None)  # type: ignore[arg-type]
+    client = ModelClient(transport=transport, record=True, golden_root=None)
     reading = read_inbox(["a", "b", "c", "d"], client, ApplicationState.SUBMITTED)
 
     assert [m.state_after for m in reading.messages] == [

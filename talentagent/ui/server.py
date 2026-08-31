@@ -711,7 +711,7 @@ class TalentAgentUIHandler(http.server.BaseHTTPRequestHandler):
             result = fill_form(page, load_map(platform), package)
             halted = None
         except HaltedRun as exc:
-            result = exc.partial
+            result = exc.partial_fill()
             halted = str(exc)
 
         sources = result.log.sources()

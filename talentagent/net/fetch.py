@@ -43,12 +43,17 @@ class Transport(Protocol):
         self,
         url: str,
         timeout: float,
+        /,
         *,
         headers: Mapping[str, str] | None = None,
         data: bytes | None = None,
     ) -> bytes:
         """Perform the request and return the raw response body."""
         ...
+
+    # The URL and timeout are positional-only so an implementation may name them whatever reads
+    # best — several stubs call them `_url` and `_timeout` to show they are ignored — while the
+    # two optional arguments stay keyword-only and so keep their names as part of the contract.
 
 
 class AllowlistViolation(RuntimeError):
