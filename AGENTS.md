@@ -174,9 +174,10 @@ issue holding the task checklist.
 | 0 | Foundations, fixtures, and the guardrail harness | R6, and the precondition for every other phase |
 | 1 | Two-pass apply — deterministic execution | R1, Spike A |
 | 2 | Evidence graph and credited composition | R2, Spike B |
+| 2.5 | Interactive demo and review surface | User review and interactive verification |
 | 3 | The autonomous inbound pipeline | R4, Spike D |
 | 4 | Opportunity scoring and the analyst loop | R3 and R5, Spikes C and E |
-| 5 | Review surface, deployment, and acceptance | Definition of Done |
+| 5 | Production deployment and acceptance | Definition of Done |
 
 Ordering is by risk retired, not by feature area (ADR-0011). Phases 1 and 2 run first and in that
 order because they carry the two risks that would reshape the system if they could not be retired.

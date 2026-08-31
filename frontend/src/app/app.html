@@ -1,0 +1,31 @@
+<div class="app-shell">
+  <app-navbar
+    [activeTab]="activeTab()"
+    [status]="status()"
+    [isConnected]="isConnected()"
+    (tabChange)="onTabChange($event)"
+  ></app-navbar>
+
+  <main class="main-content">
+    <app-profile-view
+      *ngIf="activeTab() === 'profile'"
+      [selectedProfileId]="selectedProfileId()"
+      (profileSelected)="onProfileSelected($event)"
+    ></app-profile-view>
+
+    <app-compose-view
+      *ngIf="activeTab() === 'compose'"
+      [selectedProfileId]="selectedProfileId()"
+    ></app-compose-view>
+
+    <app-graph-view
+      *ngIf="activeTab() === 'graph'"
+      [selectedProfileId]="selectedProfileId()"
+    ></app-graph-view>
+
+    <app-guardrails-view
+      *ngIf="activeTab() === 'guardrails'"
+      [status]="status()"
+    ></app-guardrails-view>
+  </main>
+</div>
