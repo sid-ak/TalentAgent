@@ -213,10 +213,26 @@ new top-level directory, the epic issue names it.
 
 The `docs/` tree is published to GitHub Pages by `.github/workflows/docs.yml`.
 
-1. `pip install -r requirements-docs.txt`: installs MkDocs and the Material theme.
-2. `mkdocs serve`: live-reloading preview on `http://127.0.0.1:8000`.
-3. `mkdocs build --strict`: what CI runs; it fails on a broken internal link or an unrecognised
-   reference, so run it before you finish.
+The documentation toolchain is deliberately separate from the project's own dependencies — it is
+pinned in `requirements-docs.txt`, not in `pyproject.toml`, because mkdocstrings reads the source
+statically and never imports the package. So `.venv` does not have MkDocs in it, and the quickest
+way to run the site is without installing anything:
+
+1. `uvx --with-requirements requirements-docs.txt --from mkdocs mkdocs serve`: live-reloading
+   preview on `http://127.0.0.1:8000/TalentAgent/`. Note the path — `site_url` sets that base.
+2. `uvx --with-requirements requirements-docs.txt --from mkdocs mkdocs build --strict`: what CI
+   runs. It fails on a broken internal link or an unresolvable reference, so run it before you
+   finish.
+
+For repeated use, a dedicated environment is faster to start:
+
+1. `uv venv --python 3.12 .venv-docs`: creates it.
+2. `uv pip install --python .venv-docs/bin/python -r requirements-docs.txt`: installs the pinned
+   toolchain.
+3. `.venv-docs/bin/mkdocs serve`: the preview, without the uvx resolution step each time.
+
+Set `DISABLE_MKDOCS_2_WARNING=true` to silence an unrelated ecosystem advisory a plugin prints, so
+a real warning stays visible.
 
 Adding a prose page means adding it to the `nav` in `mkdocs.yml`. Mermaid blocks render natively
 through the superfences configuration — write them as ```` ```mermaid ```` fences and do not add a
