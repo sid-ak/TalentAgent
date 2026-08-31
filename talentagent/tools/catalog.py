@@ -55,6 +55,14 @@ def build_registry() -> Registry:
             from talentagent.evidence.retrieval import query_evidence
 
             registry.register(name, side_effect, query_evidence, notes)
+        elif name == "elicit_evidence":
+            from talentagent.evidence.elicitation import elicit_evidence
+
+            registry.register(name, side_effect, elicit_evidence, notes)
+        elif name == "promote_statement":
+            from talentagent.evidence.elicitation import promote_statement
+
+            registry.register(name, side_effect, promote_statement, notes)
         else:
             registry.register(name, side_effect, _not_yet_implemented(name, issue), notes)
     return registry
