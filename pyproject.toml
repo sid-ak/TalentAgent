@@ -1,0 +1,96 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "talentagent"
+version = "0.1.0"
+description = "An event-driven multi-agent system that operates a job search as a long-running workflow."
+readme = "README.md"
+requires-python = ">=3.12"
+license = { text = "MIT" }
+dependencies = [
+    "pydantic>=2.9",
+    "pyyaml>=6.0",
+    "lxml>=5.3",
+]
+
+[project.optional-dependencies]
+# The live browser backend. Absent by default so the fixture-driven suite needs no browser
+# download; the form worker installs it explicitly.
+browser = ["playwright>=1.47"]
+dev = [
+    "pytest>=8.3",
+    "pytest-cov>=5.0",
+    "ruff>=0.7",
+    "mypy>=1.13",
+    "types-PyYAML",
+    "lxml-stubs",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["talentagent"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+src = ["talentagent", "tests"]
+
+[tool.ruff.lint]
+select = [
+    "E", "W",   # pycodestyle
+    "F",        # pyflakes
+    "I",        # import sorting
+    "B",        # bugbear
+    "UP",       # pyupgrade
+    "SIM",      # simplify
+    "D",        # pydocstyle — the docstring rule in AGENTS.md section 5
+    "ANN",      # type annotations
+    "TID251",   # banned imports; see flake8-tidy-imports below
+    "PT",       # pytest style
+]
+ignore = [
+    "D203",     # conflicts with D211
+    "D213",     # conflicts with D212
+    "ANN401",   # Any is occasionally the honest annotation
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Test bodies may be long; the docstring rule still applies (D is not ignored here).
+"tests/**" = ["ANN201", "ANN001"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.lint.flake8-tidy-imports.banned-api]
+# G5 and G7: every outbound read goes through talentagent.net.fetch. Enforced here so a direct
+# HTTP call fails the build rather than review.
+"requests".msg = "Use talentagent.net.fetch; direct HTTP bypasses the G5 allowlist."
+"urllib.request".msg = "Use talentagent.net.fetch; direct HTTP bypasses the G5 allowlist."
+"httpx".msg = "Use talentagent.net.fetch; direct HTTP bypasses the G5 allowlist."
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+warn_unreachable = true
+files = ["talentagent", "tests"]
+
+[[tool.mypy.overrides]]
+module = ["playwright.*"]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+addopts = "--strict-markers --strict-config"
+testpaths = ["tests"]
+markers = [
+    "guardrail: asserts a guardrail invariant (G1-G7) holds; reported as its own CI check",
+    "network: needs real network or an emulator; exempt from the zero-network fixture",
+]
+
+[tool.coverage.run]
+source = ["talentagent"]
+
+[tool.coverage.report]
+# The guardrail suite asserts impossibility rather than exercising lines, so it is excluded
+# from the coverage figure (issue #3).
+exclude_lines = ["pragma: no cover", "if TYPE_CHECKING:"]
