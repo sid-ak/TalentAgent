@@ -1,0 +1,76 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1180 530" width="1180" height="530" role="img" aria-label="Two-pass apply flow">
+  <style>
+    text { font-family: Roboto, "Helvetica Neue", Helvetica, Arial, sans-serif; }
+    .h1 { font-size: 24px; font-weight: 600; fill: #202124; }
+    .h2 { font-size: 13.5px; fill: #5f6368; }
+    .ct { font-size: 15px; font-weight: 500; fill: #202124; }
+    .nm { font-size: 15px; font-weight: 500; fill: #202124; }
+    .sub{ font-size: 11px; fill: #5f6368; font-family: "Roboto Mono", ui-monospace, Menlo, monospace; }
+    .lb { font-size: 11.5px; fill: #3c4043; }
+    .grp{ font-size: 12px; font-weight: 600; letter-spacing: .06em; }
+    .card { fill: #ffffff; stroke: #202124; stroke-width: 1.4; }
+    .flow { stroke: #202124; stroke-width: 1.6; fill: none; }
+    .hum  { stroke: #188038; stroke-width: 1.9; fill: none; }
+    .bound{ stroke: #188038; stroke-width: 2.4; stroke-dasharray: 10 6; }
+    .ic  { fill: none; stroke: #1a73e8; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+    .icg { fill: none; stroke: #188038; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+  </style>
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#202124"/></marker>
+    <marker id="ag" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#188038"/></marker>
+    <g id="i-ats"><rect class="ic" x="3" y="7" width="18" height="13" rx="2"/><path class="ic" d="M9 7V5h6v2M3 12h18"/></g>
+    <g id="i-list"><path class="ic" d="M4 7h16M4 12h16M4 17h10"/></g>
+    <g id="i-link"><path class="ic" d="M10 14a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1"/><path class="ic" d="M14 10a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1"/></g>
+    <g id="i-pkg"><path class="ic" d="M12 3 L21 8v8l-9 5-9-5V8z"/><path class="ic" d="M3 8l9 5 9-5M12 13v8"/></g>
+    <g id="i-map"><rect class="ic" x="3" y="4" width="18" height="16" rx="2"/><path class="ic" d="M9 4v16M3 12h6"/></g>
+    <g id="i-form"><rect class="ic" x="3" y="4" width="18" height="16" rx="2"/><path class="ic" d="M3 9h18M7 13h7M7 16h5"/></g>
+    <g id="i-stop"><circle class="ic" cx="12" cy="12" r="9"/><rect class="ic" x="9" y="9" width="6" height="6" rx="1"/></g>
+    <g id="i-user"><circle class="icg" cx="12" cy="8" r="3.6"/><path class="icg" d="M5 20c0-3.9 3.1-6.4 7-6.4s7 2.5 7 6.4"/></g>
+    <g id="i-send"><path class="icg" d="M21 3 L10.5 13.5M21 3 L14.5 21 L10.5 13.5 L3 9.5 Z"/></g>
+  </defs>
+
+  <rect x="0" y="0" width="1180" height="530" fill="#ffffff"/>
+  <text class="h1" x="32" y="42">Two-Pass Apply</text>
+  <text class="h2" x="32" y="64">The agent does the work. The human owns the send.</text>
+
+  <rect x="24" y="88" width="784" height="330" rx="14" fill="#d2e3fc"/>
+  <text class="grp" x="48" y="114" fill="#174ea6">AGENT · AUTONOMOUS</text>
+
+  <rect x="852" y="88" width="304" height="330" rx="14" fill="#e6f4ea"/>
+  <text class="grp" x="876" y="114" fill="#188038">HUMAN · AUTHORITY</text>
+
+  <line class="bound" x1="830" y1="96" x2="830" y2="410"/>
+
+  <text class="ct" x="48" y="152">Pass 1 — compose</text>
+  <g><rect class="card" x="48" y="168" width="176" height="64" rx="8"/><use href="#i-ats" x="66" y="188"/><text class="nm" x="100" y="205">posting</text></g>
+  <g><rect class="card" x="248" y="168" width="176" height="64" rx="8"/><use href="#i-list" x="266" y="188"/><text class="nm" x="300" y="205">requirements</text></g>
+  <g><rect class="card" x="448" y="168" width="176" height="64" rx="8"/><use href="#i-link" x="466" y="188"/><text class="nm" x="500" y="199">evidence</text><text class="sub" x="500" y="216">credits + gaps</text></g>
+  <g><rect class="card" x="648" y="168" width="136" height="64" rx="8"/><use href="#i-pkg" x="666" y="188"/><text class="nm" x="700" y="205">package</text></g>
+
+  <path class="flow" marker-end="url(#a)" d="M224 200 H 242"/>
+  <path class="flow" marker-end="url(#a)" d="M424 200 H 442"/>
+  <path class="flow" marker-end="url(#a)" d="M624 200 H 642"/>
+
+  <text class="ct" x="48" y="308">Pass 2 — execute</text>
+  <g><rect class="card" x="48" y="324" width="216" height="64" rx="8"/><use href="#i-map" x="66" y="344"/><text class="nm" x="100" y="355">field map</text><text class="sub" x="100" y="372">deterministic</text></g>
+  <g><rect class="card" x="296" y="324" width="216" height="64" rx="8"/><use href="#i-form" x="314" y="344"/><text class="nm" x="348" y="355">fill form</text><text class="sub" x="348" y="372">unauthenticated</text></g>
+  <g><rect class="card" x="544" y="324" width="240" height="64" rx="8"/><use href="#i-stop" x="562" y="344"/><text class="nm" x="596" y="355">capture · halt</text><text class="sub" x="596" y="372">unsubmitted</text></g>
+
+  <path class="flow" marker-end="url(#a)" d="M716 232 V 268 H 156 V 318"/>
+  <path class="flow" marker-end="url(#a)" d="M264 356 H 290"/>
+  <path class="flow" marker-end="url(#a)" d="M512 356 H 538"/>
+
+  <g><rect class="card" x="876" y="168" width="256" height="76" rx="8"/><use href="#i-user" x="896" y="194"/><text class="nm" x="932" y="200">review</text><text class="sub" x="932" y="219">click a line → its source</text></g>
+  <g><rect class="card" x="876" y="324" width="256" height="76" rx="8"/><use href="#i-send" x="896" y="350"/><text class="nm" x="932" y="356">submit</text><text class="sub" x="932" y="375">bot challenge lands here</text></g>
+
+  <path class="hum" marker-end="url(#ag)" d="M784 340 H 812 V 206 H 870"/>
+  <path class="hum" marker-end="url(#ag)" d="M1004 244 V 318"/>
+
+  <rect x="24" y="446" width="1000" height="56" rx="8" fill="#ffffff" stroke="#dadce0"/>
+  <path class="flow" marker-end="url(#a)" d="M48 474 H 96"/>
+  <text class="lb" x="106" y="478">agent</text>
+  <path class="hum" marker-end="url(#ag)" d="M176 474 H 224"/>
+  <text class="lb" x="234" y="478">human — submit_application is absent from every agent tool registry (G3, ADR-0001)</text>
+</svg>

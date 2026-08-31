@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1180 520" width="1180" height="520" role="img" aria-label="Inbound mail flow">
+  <style>
+    text { font-family: Roboto, "Helvetica Neue", Helvetica, Arial, sans-serif; }
+    .h1 { font-size: 24px; font-weight: 600; fill: #202124; }
+    .h2 { font-size: 13.5px; fill: #5f6368; }
+    .ct { font-size: 14px; font-weight: 500; fill: #202124; }
+    .nm { font-size: 15px; font-weight: 500; fill: #202124; }
+    .sub{ font-size: 11px; fill: #5f6368; font-family: "Roboto Mono", ui-monospace, Menlo, monospace; }
+    .lb { font-size: 11.5px; fill: #3c4043; }
+    .grp{ font-size: 12px; font-weight: 600; fill: #188038; letter-spacing: .06em; }
+    .card { fill: #ffffff; stroke: #202124; stroke-width: 1.4; }
+    .flow { stroke: #202124; stroke-width: 1.6; fill: none; }
+    .ctrl { stroke: #202124; stroke-width: 1.6; fill: none; stroke-dasharray: 7 5; }
+    .ic { fill: none; stroke: #1a73e8; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+  </style>
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#202124"/></marker>
+    <g id="i-mail"><rect class="ic" x="2" y="5" width="20" height="14" rx="2"/><path class="ic" d="M2.5 6.5 L12 13.5 L21.5 6.5"/></g>
+    <g id="i-bolt"><path class="ic" d="M13 3 L6 13h5l-1 8 7-10h-5z"/></g>
+    <g id="i-filter"><path class="ic" d="M3 5h18l-7 8v7l-4-2v-5z"/></g>
+    <g id="i-flow"><circle class="ic" cx="6" cy="6" r="2.6"/><circle class="ic" cx="18" cy="12" r="2.6"/><circle class="ic" cx="6" cy="18" r="2.6"/><path class="ic" d="M8.6 6H13a2.5 2.5 0 0 1 2.5 3M8.6 18H13a2.5 2.5 0 0 0 2.5-3"/></g>
+    <g id="i-db"><ellipse class="ic" cx="12" cy="6" rx="8" ry="3"/><path class="ic" d="M4 6v12c0 1.6 3.6 3 8 3s8-1.4 8-3V6M4 12c0 1.6 3.6 3 8 3s8-1.4 8-3"/></g>
+    <g id="i-x"><circle class="ic" cx="12" cy="12" r="9"/><path class="ic" d="M8.5 8.5l7 7M15.5 8.5l-7 7"/></g>
+  </defs>
+
+  <rect x="0" y="0" width="1180" height="520" fill="#ffffff"/>
+  <text class="h1" x="32" y="42">Inbound Mail</text>
+  <text class="h2" x="32" y="64">The autonomous path. No human appears anywhere in it.</text>
+
+  <rect x="24" y="86" width="1132" height="300" rx="14" fill="#e6f4ea"/>
+  <text class="grp" x="48" y="112">RUNS UNATTENDED</text>
+
+  <g><rect class="card" x="48" y="180" width="188" height="66" rx="8"/><use href="#i-mail" x="68" y="201"/><text class="nm" x="104" y="211">Gmail</text><text class="sub" x="104" y="228">new message</text></g>
+  <g><rect class="card" x="286" y="180" width="188" height="66" rx="8"/><use href="#i-bolt" x="306" y="201"/><text class="nm" x="342" y="206">trigger</text><text class="sub" x="342" y="222">hourly · weekdays</text><text class="sub" x="342" y="236">6-hourly otherwise</text></g>
+  <g><rect class="card" x="524" y="180" width="188" height="66" rx="8"/><use href="#i-filter" x="544" y="201"/><text class="nm" x="580" y="206">triage</text><text class="sub" x="580" y="222">tier 1 · batched</text><text class="sub" x="580" y="236">one call per run</text></g>
+  <g><rect class="card" x="762" y="180" width="188" height="66" rx="8"/><use href="#i-flow" x="782" y="201"/><text class="nm" x="818" y="211">pipeline</text><text class="sub" x="818" y="228">tier 2</text></g>
+  <g><rect class="card" x="1000" y="180" width="132" height="66" rx="8"/><use href="#i-db" x="1020" y="201"/><text class="nm" x="1052" y="217">Firestore</text></g>
+
+  <path class="ctrl" marker-end="url(#a)" d="M236 213 H 280"/>
+  <text class="lb" x="232" y="168">cursor</text>
+  <path class="flow" marker-end="url(#a)" d="M474 213 H 518"/>
+  <path class="flow" marker-end="url(#a)" d="M712 213 H 756"/>
+  <text class="lb" x="716" y="168">job-related</text>
+  <path class="flow" marker-end="url(#a)" d="M950 213 H 994"/>
+
+  <g><rect class="card" x="524" y="300" width="188" height="56" rx="8"/><use href="#i-x" x="544" y="316"/><text class="nm" x="580" y="333">drop</text></g>
+  <path class="flow" marker-end="url(#a)" d="M618 246 V 294"/>
+  <text class="lb" x="628" y="278">not job-related</text>
+
+  <g><rect class="card" x="762" y="292" width="370" height="72" rx="8"/>
+    <text class="sub" x="782" y="315">SCREEN   →  hold calendar</text>
+    <text class="sub" x="782" y="335">OFFER     →  escalate</text>
+    <text class="sub" x="782" y="355">GHOSTED →  draft follow-up</text>
+  </g>
+  <path class="flow" marker-end="url(#a)" d="M856 246 V 286"/>
+
+  <rect x="24" y="422" width="700" height="56" rx="8" fill="#ffffff" stroke="#dadce0"/>
+  <path class="flow" marker-end="url(#a)" d="M48 450 H 96"/>
+  <text class="lb" x="106" y="454">data flow</text>
+  <path class="ctrl" marker-end="url(#a)" d="M196 450 H 244"/>
+  <text class="lb" x="254" y="454">scheduled poll — cadence set by the workflow, not by proximity to push (ADR-0005)</text>
+</svg>

@@ -1,0 +1,74 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1060 640" width="1060" height="640" role="img" aria-label="Analyst loop">
+  <style>
+    text { font-family: Roboto, "Helvetica Neue", Helvetica, Arial, sans-serif; }
+    .h1 { font-size: 24px; font-weight: 600; fill: #202124; }
+    .h2 { font-size: 13.5px; fill: #5f6368; }
+    .nm { font-size: 15px; font-weight: 500; fill: #202124; }
+    .sub{ font-size: 11px; fill: #5f6368; font-family: "Roboto Mono", ui-monospace, Menlo, monospace; }
+    .lb { font-size: 11.5px; fill: #3c4043; }
+    .num{ font-size: 11px; font-weight: 600; fill: #ffffff; }
+    .card { fill: #ffffff; stroke: #202124; stroke-width: 1.4; }
+    .flow { stroke: #202124; stroke-width: 1.6; fill: none; }
+    .exp  { stroke: #e37400; stroke-width: 1.8; fill: none; stroke-dasharray: 7 5; }
+    .ic { fill: none; stroke: #1a73e8; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+  </style>
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#202124"/></marker>
+    <marker id="ao" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#e37400"/></marker>
+  </defs>
+
+  <rect x="0" y="0" width="1060" height="640" fill="#ffffff"/>
+  <text class="h1" x="32" y="42">The Analyst Loop</text>
+  <text class="h2" x="32" y="64">Findings are maintained, not accumulated. The loop tests its own conclusions.</text>
+
+  <circle cx="530" cy="360" r="196" fill="none" stroke="#dadce0" stroke-width="2" stroke-dasharray="4 7"/>
+
+  <g><rect class="card" x="396" y="118" width="268" height="60" rx="8"/>
+     <circle cx="424" cy="148" r="11" fill="#1a73e8"/><text class="num" x="424" y="152" text-anchor="middle">1</text>
+     <text class="nm" x="446" y="144">expire</text><text class="sub" x="446" y="162">past horizon → back to queue</text></g>
+
+  <g><rect class="card" x="756" y="252" width="268" height="60" rx="8"/>
+     <circle cx="784" cy="282" r="11" fill="#1a73e8"/><text class="num" x="784" y="286" text-anchor="middle">2</text>
+     <text class="nm" x="806" y="278">resolve</text><text class="sub" x="806" y="296">n · strength · expiry</text></g>
+
+  <g><rect class="card" x="756" y="424" width="268" height="60" rx="8"/>
+     <circle cx="784" cy="454" r="11" fill="#1a73e8"/><text class="num" x="784" y="458" text-anchor="middle">3</text>
+     <text class="nm" x="806" y="450">recompute priors</text><text class="sub" x="806" y="468">intervals, with decay</text></g>
+
+  <g><rect class="card" x="396" y="546" width="268" height="60" rx="8"/>
+     <circle cx="424" cy="576" r="11" fill="#1a73e8"/><text class="num" x="424" y="580" text-anchor="middle">4</text>
+     <text class="nm" x="446" y="572">hypothesize</text><text class="sub" x="446" y="590">one segment, one variable</text></g>
+
+  <g><rect class="card" x="36" y="424" width="268" height="60" rx="8"/>
+     <circle cx="64" cy="454" r="11" fill="#1a73e8"/><text class="num" x="64" y="458" text-anchor="middle">5</text>
+     <text class="nm" x="86" y="450">assign</text><text class="sub" x="86" y="468">composer reads the rule</text></g>
+
+  <g><rect class="card" x="36" y="252" width="268" height="60" rx="8"/>
+     <circle cx="64" cy="282" r="11" fill="#5f6368"/><text class="num" x="64" y="286" text-anchor="middle">6</text>
+     <text class="nm" x="86" y="278">observe</text><text class="sub" x="86" y="296">outcomes · append-only</text></g>
+
+  <path class="flow" marker-end="url(#a)" d="M664 156 C 736 168, 774 198, 812 246"/>
+  <path class="flow" marker-end="url(#a)" d="M890 312 V 418"/>
+  <path class="flow" marker-end="url(#a)" d="M812 484 C 774 532, 730 552, 670 566"/>
+  <path class="flow" marker-end="url(#a)" d="M396 566 C 330 552, 286 532, 248 490"/>
+  <path class="flow" marker-end="url(#a)" d="M170 424 V 318"/>
+  <path class="flow" marker-end="url(#a)" d="M248 246 C 286 198, 326 168, 390 156"/>
+
+  <g><rect class="card" x="400" y="300" width="260" height="118" rx="8" style="fill:#feefc3"/>
+     <text class="nm" x="530" y="332" text-anchor="middle">exploration budget ε</text>
+     <text class="sub" x="530" y="358" text-anchor="middle">a fixed share goes to the</text>
+     <text class="sub" x="530" y="378" text-anchor="middle">segments it rates worst</text>
+     <text class="sub" x="530" y="400" text-anchor="middle">targets wide intervals</text></g>
+
+  <path class="exp" marker-end="url(#ao)" d="M400 386 C 340 404, 300 426, 258 442"/>
+  <path class="exp" marker-end="url(#ao)" d="M530 300 V 184"/>
+
+  <rect x="32" y="576" width="330" height="0" fill="none"/>
+  <rect x="32" y="552" width="324" height="56" rx="8" fill="#ffffff" stroke="#dadce0"/>
+  <path class="flow" marker-end="url(#a)" d="M52 580 H 94"/>
+  <text class="lb" x="104" y="584">loop</text>
+  <path class="exp" marker-end="url(#ao)" d="M158 580 H 200"/>
+  <text class="lb" x="210" y="584">exploration</text>
+</svg>

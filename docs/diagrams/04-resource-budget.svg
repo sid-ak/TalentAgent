@@ -1,0 +1,62 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 520" width="1000" height="520" role="img" aria-label="Free-tier resource budget">
+  <style>
+    text { font-family: Roboto, "Helvetica Neue", Helvetica, Arial, sans-serif; }
+    .h1 { font-size: 24px; font-weight: 600; fill: #202124; }
+    .h2 { font-size: 13.5px; fill: #5f6368; }
+    .nm { font-size: 14.5px; font-weight: 500; fill: #202124; }
+    .sub{ font-size: 11.5px; fill: #5f6368; font-family: "Roboto Mono", ui-monospace, Menlo, monospace; }
+    .hd { font-size: 11.5px; font-weight: 600; fill: #5f6368; letter-spacing: .06em; }
+    .mult { font-size: 14px; font-weight: 600; fill: #5f6368; }
+    .tight{ font-size: 14px; font-weight: 600; fill: #c5221f; }
+    .lb { font-size: 12px; fill: #3c4043; }
+  </style>
+
+  <rect x="0" y="0" width="1000" height="520" fill="#ffffff"/>
+  <text class="h1" x="32" y="42">Capacity Budget</text>
+  <text class="h2" x="32" y="64">Daily use against ceiling. Single user.</text>
+
+  <text class="hd" x="32" y="112">RESOURCE</text>
+  <text class="hd" x="360" y="112">CONSUMPTION</text>
+  <text class="hd" x="912" y="112">HEADROOM</text>
+  <line x1="32" y1="124" x2="968" y2="124" stroke="#dadce0"/>
+
+  <g>
+    <text class="nm" x="32" y="160">Firestore reads</text><text class="sub" x="32" y="178">2,000 / 50,000</text>
+    <rect x="360" y="146" width="480" height="22" rx="4" fill="#f1f3f4"/>
+    <rect x="360" y="146" width="19" height="22" rx="4" fill="#34a853"/>
+    <text class="mult" x="912" y="163">25×</text>
+  </g>
+  <g>
+    <text class="nm" x="32" y="216">Firestore writes</text><text class="sub" x="32" y="234">500 / 20,000</text>
+    <rect x="360" y="202" width="480" height="22" rx="4" fill="#f1f3f4"/>
+    <rect x="360" y="202" width="12" height="22" rx="4" fill="#34a853"/>
+    <text class="mult" x="912" y="219">40×</text>
+  </g>
+  <g>
+    <text class="nm" x="32" y="272">Firestore storage</text><text class="sub" x="32" y="290">50 MiB / 1 GiB</text>
+    <rect x="360" y="258" width="480" height="22" rx="4" fill="#f1f3f4"/>
+    <rect x="360" y="258" width="24" height="22" rx="4" fill="#34a853"/>
+    <text class="mult" x="912" y="275">20×</text>
+  </g>
+  <g>
+    <text class="nm" x="32" y="328">Gemini Flash</text><text class="sub" x="32" y="346">120 / 250 requests</text>
+    <rect x="360" y="314" width="480" height="22" rx="4" fill="#f1f3f4"/>
+    <rect x="360" y="314" width="230" height="22" rx="4" fill="#ea8600"/>
+    <text class="tight" x="912" y="331">2×</text>
+  </g>
+  <g>
+    <text class="nm" x="32" y="384">Gemini Flash-Lite</text><text class="sub" x="32" y="402">300 / 1,000 requests</text>
+    <rect x="360" y="370" width="480" height="22" rx="4" fill="#f1f3f4"/>
+    <rect x="360" y="370" width="144" height="22" rx="4" fill="#34a853"/>
+    <text class="mult" x="912" y="387">3×</text>
+  </g>
+  <g>
+    <text class="nm" x="32" y="440">Apps Script runtime</text><text class="sub" x="32" y="458">15 / 90 minutes</text>
+    <rect x="360" y="426" width="480" height="22" rx="4" fill="#f1f3f4"/>
+    <rect x="360" y="426" width="80" height="22" rx="4" fill="#34a853"/>
+    <text class="mult" x="912" y="443">6×</text>
+  </g>
+
+  <rect x="32" y="482" width="936" height="0" fill="none"/>
+  <text class="lb" x="32" y="500">Gemini Flash is the binding constraint of the system. Development burns it faster than operation — fixtures keep the test suite at zero API calls.</text>
+</svg>
