@@ -62,7 +62,7 @@ class GmailNotConfigured(RuntimeError):
         super().__init__(
             "Gmail is not connected. Set GMAIL_CLIENT_ID, GMAIL_CLIENT_SECRET, and "
             "GMAIL_REFRESH_TOKEN. Obtain the refresh token by running "
-            "`python scripts/gmail_auth.py`, which walks you through Google's consent screen "
+            "`python3 scripts/gmail_auth.py`, which walks you through Google's consent screen "
             "and prints the token; nothing else in the system can obtain one."
         )
 

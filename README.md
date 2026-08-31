@@ -98,7 +98,7 @@ Without this the surface falls back to pasting replies in. With it, it reads you
 1. In the Google Cloud console, configure the OAuth consent screen as External, keep it in Testing,
    add yourself as a test user, and add the `.../auth/gmail.readonly` scope.
 2. Create an OAuth client ID of type Desktop app, and note the client ID and secret.
-3. `python scripts/gmail_auth.py --client-id ... --client-secret ...`: opens Google's consent
+3. `python3 scripts/gmail_auth.py --client-id ... --client-secret ...`: opens Google's consent
    screen and prints a refresh token. This is deliberately a human-run step — nothing in the
    running system can obtain a token for itself.
 4. Put `GMAIL_CLIENT_ID`, `GMAIL_CLIENT_SECRET`, and `GMAIL_REFRESH_TOKEN` in `.env`, or set them

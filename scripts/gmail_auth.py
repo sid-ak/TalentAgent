@@ -8,7 +8,9 @@ not something a running service can arrange for itself (G6).
 It asks for `gmail.readonly` and nothing else, so the token it produces cannot send mail.
 
 Usage:
-    python scripts/gmail_auth.py --client-id ... --client-secret ...
+    python3 scripts/gmail_auth.py --client-id ... --client-secret ...
+
+Uses only the standard library, so it needs no virtualenv and no dependencies installed.
 
 Prints the refresh token. Put it in .env as GMAIL_REFRESH_TOKEN alongside GMAIL_CLIENT_ID and
 GMAIL_CLIENT_SECRET, or pass all three to Cloud Run as environment variables.
