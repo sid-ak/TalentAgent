@@ -47,6 +47,12 @@ theme:
         icon: material/brightness-4
         name: Switch to light mode
 
+# `mkdocs serve` watches docs/ and mkdocs.yml by default. The code reference is generated from the
+# source, so without these a module edited during a preview would not reload.
+watch:
+  - talentagent
+  - scripts/gen_ref_pages.py
+
 nav:
   - Home: index.md
   - Why: TalentAgent-Why.md

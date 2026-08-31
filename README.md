@@ -33,6 +33,13 @@ Specification, architecture, and decision records are complete. Implementation i
 
 ## Building the documentation locally
 
-1. `pip install -r requirements-docs.txt`: installs MkDocs and the Material theme, pinned.
-2. `mkdocs serve`: live-reloading preview on `http://127.0.0.1:8000`.
-3. `mkdocs build --strict`: what CI runs; fails on broken internal links.
+The toolchain is pinned in `requirements-docs.txt` and kept separate from the project's own
+dependencies, so nothing needs installing into the project environment:
+
+1. `uvx --with-requirements requirements-docs.txt --from mkdocs mkdocs serve`: live-reloading
+   preview on `http://127.0.0.1:8000/TalentAgent/`.
+2. `uvx --with-requirements requirements-docs.txt --from mkdocs mkdocs build --strict`: what CI
+   runs; fails on broken internal links.
+
+The site includes a code reference generated from the source on every build, so a new module
+documents itself. `mkdocs serve` watches `talentagent/` as well as `docs/`.
