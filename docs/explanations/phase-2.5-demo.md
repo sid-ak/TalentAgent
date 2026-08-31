@@ -90,16 +90,6 @@ The form-fill endpoint runs the Pass 2 executor from Phase 1 against a fixture f
 completion it measured. It previously loaded a field map, marked every field filled without executing
 anything, and returned a hardcoded completion rate of 1.0.
 
-## What was removed
-
-A GitHub sync endpoint turned a username and repository string into the claim "Built core services
-and infrastructure for {user}/{repo}", stamped it `verifiable`, and wrote it to the evidence graph. No
-model was involved; it was a fabrication in the one path a reviewer was most likely to click, and
-precisely what G1 exists to prevent. It also derived node identifiers from `hash()`, which Python
-randomises per process.
-
-Deleting it cost the demo a feature and is the single most important change in this phase.
-
 ### Reading what comes back
 
 An application does not end when it is sent, and the part that is genuinely tedious is keeping track
@@ -115,6 +105,16 @@ exactly where it was, which is what you want when a recruiter sends something no
 `GHOSTED` is unreachable from any message, by construction rather than by convention: it is derived
 from elapsed silence, so no label maps to it, and a test walks every label against every state to
 prove none arrives there.
+
+## What was removed
+
+A GitHub sync endpoint turned a username and repository string into the claim "Built core services
+and infrastructure for {user}/{repo}", stamped it `verifiable`, and wrote it to the evidence graph. No
+model was involved; it was a fabrication in the one path a reviewer was most likely to click, and
+precisely what G1 exists to prevent. It also derived node identifiers from `hash()`, which Python
+randomises per process.
+
+Deleting it cost the demo a feature and is the single most important change in this phase.
 
 ## What this does not do
 
