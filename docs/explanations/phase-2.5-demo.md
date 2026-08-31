@@ -1,85 +1,112 @@
-# Phase 2.5: Interactive demo and review surface
+# Phase 2.5: The agent loop and the review surface
 
 ## What this phase was for
 
-A core principle of TalentAgent is that the human retains final authority over all irreversible
-actions (`G3`, `ADR-0001`). Agents can retrieve evidence, verify sufficiency, compose credited
-packages, and mechanically fill ATS forms — but they never submit an application or invent a claim
-out of thin air (`G1`, `G2`).
+Phases 1 and 2 built two halves of a promise. Phase 1 could fill an employer's form deterministically
+and stop before submitting. Phase 2 could take a requirement, search what you had actually done, and
+either write a line backed by it or refuse. Neither half was reachable by a person, and neither had
+ever called a model in anger.
 
-To make this contract tangible and demonstrable, Phase 2.5 introduces an interactive Angular web
-application. It serves as both the human review surface and the hackathon demonstration interface,
-bringing together the deterministic foundation of Phase 1 and the evidence-constrained composition
-engine of Phase 2.
+Phase 2.5 closes both gaps: it puts a loop around the pieces so they run as one thing, points that
+loop at a live model, and gives it a surface a person can use without reading the specification.
+
+## The idea the whole thing rests on
+
+Most tools that write job applications work by asking a model to write a job application. The model
+is given your resume and a posting, and it produces plausible sentences. Some of those sentences are
+true. You cannot tell which, and neither can the model, because nothing in the arrangement
+distinguishes a fact you supplied from a fact it inferred to fill a gap.
+
+TalentAgent inverts the arrangement. The model never decides *whether* a line may be written — only
+how to phrase one that has already been authorised. Authorisation is a number computed outside the
+model: for each requirement, the system searches your evidence, scores how well it is covered, and
+compares that score to a threshold. Above the threshold, the model is handed a small set of your own
+entries and asked to phrase one of them. Below it, there is nothing to phrase, and the system asks
+you a question instead.
+
+That is why the interesting output of a run is not the bullets. It is the questions.
+
+## The loop
+
+One pass over a posting, in [`talentagent/agent/loop.py`](../reference/talentagent/agent/loop.md):
+
+```mermaid
+flowchart TD
+    A[Posting arrives as data] --> B[Gemini Flash-Lite:<br/>separate requirements from perks]
+    B --> C{For each requirement}
+    C --> D[Search the evidence graph]
+    D --> E[Score sufficiency<br/>outside the model]
+    E -->|above threshold| F[Gemini Flash:<br/>phrase one of your entries]
+    E -->|below threshold| G[Open a gap]
+    F --> H[Check every line traces back]
+    G --> I[Ask you a scoped question]
+    I -->|your answer, verbatim| D
+    H --> J[Credited package. Nothing submitted.]
+```
+
+Each step is recorded as it executes, so what the screen shows is the run itself rather than a
+summary written afterwards. A step naming a model also names which tier answered.
+
+The arrow from your answer back into the graph is the part that makes this a loop rather than a
+pipeline. An answer is stored in your words, byte for byte, and the next pass can credit a line to
+it — so the system gets better at describing you by asking, never by inventing.
 
 ## What now exists
 
-### 1. Candidate profile management
+### A loop that runs against a live model
 
-The review interface allows candidates to provide and manage their ground-truth experience through
-multiple modalities:
-- Resume upload: PDF documents are parsed in the backend using `pypdf`, extracting skills, metrics,
-  and work history into structured candidate nodes.
-- GitHub ingestion: syncs public commits, pull requests, and documentation into inspectable artifact
-  nodes with deterministic classification.
-- LinkedIn references: stores external profile links and portfolio materials.
-- Verbatim statements: candidates write raw accomplishment claims directly in their own words,
-  guaranteeing byte-for-byte retention with no model rephrasing (`Spec §3.4 Invariant 3`).
-- Profile switching: seamless toggling between preset Profile A (engineering artifacts), Profile B
-  (non-engineering attested statements only), and custom candidate profiles.
+Two model calls per pass, each on the tier its work warrants (Spec §9.2, ADR-0006). Flash-Lite reads
+the posting and separates requirements from perks and boilerplate — high volume, stable output shape.
+Flash phrases each authorised line — lower volume, genuine judgement. Requirement extraction used to
+be `splitlines()` filtered by length; composition used to take a deterministic branch because no
+model client was ever passed to it.
 
-### 2. Interactive evidence graph explorer
+### A transport that fails loudly
 
-The evidence graph is rendered as an interactive network visualizer:
-- Nodes: Color-coded representation of Artifacts, Statements, Skills, Metrics, and Accomplishments.
-- Attestation badges: immediate visibility into `verifiable`, `corroborated`, `attested`, and
-  `derived` claims.
-- The derived quarantine boundary: a visual boundary illustrating how unconfirmed model inferences
-  (`derived` nodes) are strictly quarantined from application composer queries (`G1`).
-- Node inspector: detailed metadata inspection showing direct evidence edges, source links, and
-  mutation timelines.
+The previous transport caught every exception and returned a plausible fabricated response. This hid
+the fact that the tier-1 model name did not exist, so every tier-1 call had been silently failing and
+falling through to a tier-2 model. A call no candidate model can answer now raises. Each request
+carries a timeout, because an overloaded model alias was observed stalling for over two minutes,
+which from the outside is indistinguishable from a hang.
 
-### 3. Two-pass apply and review workflow
+If the model cannot be reached at all, the run degrades to your own wording used as-is and says so in
+the trace. It does not fail, and it does not pretend.
 
-The central feature of the review surface is the interactive execution of the two-pass apply flow:
+### A surface with no build step
 
-#### Pass 1: Credited composition and sufficiency
-- Requirement extraction: parses job posting descriptions into discrete requirement items.
-- Deterministic sufficiency scoring: visual meters display calculated sufficiency against the
-  candidate graph (threshold 0.60), computed outside any language model (`ADR-0008`).
-- Credited bullet inspection: every generated resume bullet displays an attestation class badge.
-  Clicking any bullet opens an evidence drawer tracing the claim directly to underlying PRs,
-  commits, or candidate statements.
-- Adversarial posting verification: users can select adversarial, out-of-scope requirements (e.g.
-  quantum computing, blockchain smart contracts) and watch the system route 100% of them to gaps
-  with zero uncredited hallucinations.
+One self-contained page in `web/`, served by the dependency-free Python server in
+`talentagent/ui/`. Three columns following what a person actually does: what you have done, the job,
+what it produced. It replaced a four-tab application whose tabs were named after the architecture —
+Candidate Profile, Apply & Compose, Evidence Graph, Guardrails — which is a tour of the system rather
+than a tool for the person using it.
 
-#### Live elicitation and statement promotion
-- Missing evidence generates an explicit gap deliverable (`FLAG` vs `ELICIT`).
-- For `ELICIT` gaps, the interface presents a single scoped question requesting specifics (timeframe,
-  scale, and specific role).
-- Candidates can type their answer live in the UI. Submitting the answer triggers promotion directly
-  into an `attested` Statement node and immediately re-composes the application package with 100%
-  provenance credit (`G2`).
+The vocabulary went with it. Guardrail numbers, sufficiency scores, and graph terminology are gone
+from the surface, and were rewritten at their source rather than papered over in the markup, so the
+trace text a person reads is the trace text the code emits.
 
-#### Pass 2: ATS form fill execution
-- Supported platforms: Greenhouse, Lever, and Ashby.
-- Step-by-step form fill playback: animated visual inspection of mapped form fields (`identity`,
-  `links`, `materials`, `screening_answers`).
-- Fallback question resolution: logs model fallback decisions for custom employer questions.
-- Halt-and-capture preview: displays captured screenshot previews of filled forms.
-- Human review gate: the `Submit Application` action is disabled for automated agents and enforces
-  human authorization before final submission (`G3`).
+### Real ATS execution
 
-### 4. Guardrails and zero-budget monitor
+The form-fill endpoint runs the Pass 2 executor from Phase 1 against a fixture form and reports the
+completion it measured. It previously loaded a field map, marked every field filled without executing
+anything, and returned a hardcoded completion rate of 1.0.
 
-The dashboard provides real-time system monitoring:
-- Live status indicators for Invariants G1 through G7.
-- Gemini Flash and Flash-Lite daily quota tracker under the zero-budget constraint (`ADR-0012`).
+## What was removed
 
-## Architecture and deployment
+A GitHub sync endpoint turned a username and repository string into the claim "Built core services
+and infrastructure for {user}/{repo}", stamped it `verifiable`, and wrote it to the evidence graph. No
+model was involved; it was a fabrication in the one path a reviewer was most likely to click, and
+precisely what G1 exists to prevent. It also derived node identifiers from `hash()`, which Python
+randomises per process.
 
-The frontend is an Angular single-page application located in `frontend/` that compiles into static
-assets in `web/`. The static bundle is served locally via a zero-dependency Python API server
-(`talentagent/ui/server.py` and `scripts/serve_demo.py`) and is pre-configured for static deployment
-on Firebase Hosting (`firebase.json`).
+Deleting it cost the demo a feature and is the single most important change in this phase.
+
+## What this does not do
+
+The five specialist agents in the specification are still one-line stubs. The only agentic surface is
+the single loop above. Nothing reads your inbox, nothing scores opportunities, and no analyst loop
+exists — those are Phase 3, and [the plan](../TalentAgent-Plan.md) says so plainly rather than
+implying otherwise.
+
+Guardrails G1, G2, G5, and G7 have real mechanisms with tests that fail when the mechanism is removed.
+G3 holds structurally, because the page protocol has no submit method. G4 is not enforced, and the
+status endpoint no longer claims that it is.

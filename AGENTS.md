@@ -165,7 +165,7 @@ with no task issue of its own uses `0` as the task number — `#11-0: ...`.
 
 ## 6. Issues, phases, and milestones
 
-Work is tracked as GitHub issues, grouped into six phases that mirror
+Work is tracked as GitHub issues, grouped into five phases that mirror
 [`docs/TalentAgent-Plan.md`](docs/TalentAgent-Plan.md). Each phase is a milestone and has one epic
 issue holding the task checklist.
 
@@ -175,14 +175,12 @@ issue holding the task checklist.
 | 1 | Two-pass apply — deterministic execution | R1, Spike A |
 | 2 | Evidence graph and credited composition | R2, Spike B |
 | 2.5 | Interactive demo and review surface | User review and interactive verification |
-| 3 | The autonomous inbound pipeline | R4, Spike D |
-| 4 | Opportunity scoring and the analyst loop | R3 and R5, Spikes C and E |
-| 5 | Production deployment and acceptance | Definition of Done |
+| 3 | What remains: the inbound pipeline, opportunity scoring and the analyst loop, deployment and acceptance | R3, R4, R5, Spikes C, D and E, Definition of Done |
 
 Ordering is by risk retired, not by feature area (ADR-0011). Phases 1 and 2 run first and in that
 order because they carry the two risks that would reshape the system if they could not be retired.
 
-Labels: `phase-0` … `phase-5` locate work in the plan; `epic` marks the phase tracking issue; the
+Labels: `phase-0` … `phase-3` locate work in the plan; `epic` marks the phase tracking issue; the
 remaining labels name the component (`ats-execution`, `evidence`, `composer`, `pipeline`, `analyst`,
 `scoring`, `review-ui`) or the kind of work (`infra`, `docs`, `testing`, `fixtures`, `guardrail`).
 

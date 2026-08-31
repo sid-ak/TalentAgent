@@ -3,12 +3,18 @@
 TalentAgent is the agent your career never had: it works while you sleep, backs every resume claim
 with real work, and learns which employers actually hire people like you.
 
-It is an event-driven multi-agent system that treats a job search as what it actually is — a
-long-running, stateful workflow with a feedback signal too sparse and too delayed for any person to
-run properly by hand. Five specialist agents maintain a graph of what you have really done, derive
-your application pipeline from your inbox rather than from a form you fill in, compose applications
-in which every generated line traces back to evidence you originated, and run a closed experiment
-loop over your outcomes.
+It is designed as an event-driven multi-agent system that treats a job search as what it actually
+is — a long-running, stateful workflow with a feedback signal too sparse and too delayed for any
+person to run properly by hand. Five specialist agents maintain a graph of what you have really
+done, derive your application pipeline from your inbox rather than from a form you fill in, compose
+applications in which every generated line traces back to evidence you originated, and run a closed
+experiment loop over your outcomes.
+
+That is the design. What runs today is the third of those: a single agent loop that composes
+credited applications from evidence you supply, asks you a question wherever the evidence runs out,
+and fills an employer's form without being able to submit it. The inbox pipeline and the analyst
+loop are [Phase 3](TalentAgent-Plan.md). The
+[Phase 2.5 explanation](explanations/phase-2.5-demo.md) describes what exists in plain English.
 
 The system acts on its own for preparation, tracking, and analysis. It never takes an action that
 asserts your identity — no account creation, no authentication, and no submission. Those stay with
@@ -37,7 +43,7 @@ you, on purpose.
 
 - :material-map-outline: [Plan](TalentAgent-Plan.md)
 
-    Six phases, ordered by risk retired rather than by feature area, each ending at a gate. Mirrors
+    Five phases, ordered by risk retired rather than by feature area, each ending at a gate. Mirrors
     the GitHub milestones and issues.
 
 - :material-scale-balance: [Decision records](ADRs/README.md)

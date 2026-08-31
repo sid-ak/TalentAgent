@@ -134,7 +134,7 @@ platform. Until those exist, the honest statement is that the approach works and
 reality. The gate record says so rather than reporting a pass.
 
 Those runs need a person at a real employer's page rather than a test that can be run on demand, so
-they happen in Phase 5, alongside the button in the review screen that a user would press to start
+they happen in Phase 3, alongside the button in the review screen that a user would press to start
 one. Doing them there means they go through exactly the path a real application takes.
 
 ## What was also built along the way
