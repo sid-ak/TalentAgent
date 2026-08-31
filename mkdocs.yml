@@ -1,0 +1,109 @@
+site_name: TalentAgent
+site_description: >-
+  An event-driven multi-agent system that operates a job search as a long-running workflow —
+  evidence-constrained generation, derived pipeline state, and a closed experiment loop.
+site_url: https://sid-ak.github.io/TalentAgent/
+site_author: Sidharth Anandkumar
+
+repo_url: https://github.com/sid-ak/TalentAgent
+repo_name: sid-ak/TalentAgent
+edit_uri: edit/main/docs/
+
+copyright: Documentation for TalentAgent
+
+theme:
+  name: material
+  language: en
+  icon:
+    repo: fontawesome/brands/github
+  features:
+    - navigation.instant
+    - navigation.tracking
+    - navigation.sections
+    - navigation.top
+    - navigation.indexes
+    - toc.follow
+    - content.code.copy
+    - content.action.edit
+    - search.suggest
+    - search.highlight
+  palette:
+    - media: "(prefers-color-scheme)"
+      toggle:
+        icon: material/brightness-auto
+        name: Follow system theme
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: teal
+      accent: deep orange
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: teal
+      accent: deep orange
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+
+nav:
+  - Home: index.md
+  - Why: TalentAgent-Why.md
+  - Specification: TalentAgent-Spec.md
+  - Architecture: TalentAgent-Architecture.md
+  - Plan: TalentAgent-Plan.md
+  - Decision records:
+      - ADRs/README.md
+      - ADRs/0001-human-retains-irreversible-actions.md
+      - ADRs/0002-graded-attestation-classes.md
+      - ADRs/0003-eligibility-gates-priors-rank.md
+      - ADRs/0004-exploration-budget.md
+      - ADRs/0005-derived-pipeline-state.md
+      - ADRs/0006-two-tier-model-routing.md
+      - ADRs/0007-coordination-through-state.md
+      - ADRs/0008-deterministic-field-map.md
+      - ADRs/0009-findings-expire.md
+      - ADRs/0010-platform-scope.md
+      - ADRs/0011-three-pillar-scope.md
+      - ADRs/0012-zero-budget-constraint.md
+
+markdown_extensions:
+  - abbr
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+      toc_depth: 3
+  - pymdownx.details
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.smartsymbols
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+
+plugins:
+  - search
+
+validation:
+  omitted_files: warn
+  absolute_links: warn
+  unrecognized_links: warn
+  anchors: info
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/sid-ak/TalentAgent
+      name: TalentAgent on GitHub

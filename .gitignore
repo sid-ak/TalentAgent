@@ -1,0 +1,23 @@
+# MkDocs build output
+site/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+
+# Local environment and credentials — nothing secret may ever be committed (ADR-0012)
+.env
+.env.*
+*.local.json
+.clasp.json
+.firebaserc.local
+
+# Editor and OS noise
+.DS_Store
+.idea/
+.vscode/
