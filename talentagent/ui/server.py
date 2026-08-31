@@ -40,6 +40,12 @@ from talentagent.evidence.retrieval import _KNOWN_SKILL_KEYWORDS, normalise_requ
 from talentagent.evidence.store import EvidenceStore, LocalEvidenceStore
 from talentagent.models.client import Tier
 from talentagent.models.live import TIER_MODELS, build_live_client
+from talentagent.pipeline.gmail import (
+    GmailCredentials,
+    GmailError,
+    GmailNotConfigured,
+    recent_messages,
+)
 from talentagent.pipeline.inbox import ApplicationState, read_inbox
 
 DEFAULT_PORT = 8080
@@ -276,6 +282,8 @@ class TalentAgentUIHandler(http.server.BaseHTTPRequestHandler):
             self._handle_agent_run(body)
         elif path == "/api/inbox/read":
             self._handle_inbox_read(body)
+        elif path == "/api/inbox/sync":
+            self._handle_inbox_sync(body)
         elif path == "/api/extract-requirements":
             self._handle_extract_requirements(body)
         elif path == "/api/compose":
@@ -301,6 +309,7 @@ class TalentAgentUIHandler(http.server.BaseHTTPRequestHandler):
                 "system": "TalentAgent",
                 "backend": "python",
                 "gemini_connected": MODEL_CLIENT is not None,
+                "gmail_connected": GmailCredentials.from_env() is not None,
                 "models": {
                     "tier_1": TIER_MODELS[Tier.ONE][0],
                     "tier_2": TIER_MODELS[Tier.TWO][0],
@@ -573,6 +582,47 @@ class TalentAgentUIHandler(http.server.BaseHTTPRequestHandler):
                 "attestation_class": "attested",
             },
         )
+
+    def _handle_inbox_sync(self, body: dict[str, Any]) -> None:
+        """Read the user's own mailbox and derive application state from what it finds."""
+        credentials = GmailCredentials.from_env()
+        if credentials is None:
+            self._send_error(503, GmailNotConfigured().args[0])
+            return
+        if MODEL_CLIENT is None:
+            self._send_error(503, "Reading the inbox needs a model, and no API key is configured")
+            return
+
+        try:
+            starting = ApplicationState(str(body.get("state", "SUBMITTED")).upper())
+        except ValueError:
+            self._send_error(400, f"Unknown state {body.get('state')!r}")
+            return
+
+        try:
+            fetched = recent_messages(credentials)
+        except GmailError as exc:
+            self._send_error(502, f"Gmail refused the read: {exc}")
+            return
+
+        if not fetched:
+            self._send_json(
+                200,
+                {
+                    "messages": [],
+                    "final_state": starting.value,
+                    "used_model": False,
+                    "source": "gmail",
+                    "fetched": 0,
+                },
+            )
+            return
+
+        reading = read_inbox([text.as_data() for text in fetched], MODEL_CLIENT, starting)
+        payload = json.loads(reading.model_dump_json())
+        payload["source"] = "gmail"
+        payload["fetched"] = len(fetched)
+        self._send_json(200, payload)
 
     def _handle_inbox_read(self, body: dict[str, Any]) -> None:
         """Label a batch of inbound messages and walk the application state machine over them."""

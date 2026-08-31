@@ -52,8 +52,10 @@ flowchart LR
     MC <--> GEM
     UI -->|"POST /api/ats-fill"| ATS
     ATS -->|"fills, cannot submit"| FORM["employer form"]
-    UI -->|"POST /api/inbox/read"| INBOX["pipeline/inbox.py<br/>label, then walk a table"]
+    UI -->|"POST /api/inbox/sync"| INBOX["pipeline/inbox.py<br/>label, then walk a table"]
     INBOX --> MC
+    GM["pipeline/gmail.py<br/>readonly, no send scope"] --> INBOX
+    MAIL["Gmail API"] --> GM
 ```
 
 The load-bearing detail is that `retrieval.py` sits between the posting and the model. Gemini is
@@ -89,6 +91,19 @@ trace says so rather than pretending.
 1. `docker build -t talentagent .`: build the image.
 2. `docker run -p 8080:8080 -e HOST=0.0.0.0 -e GEMINI_API_KEY=your-key talentagent`: serve it.
 
+### Connect Gmail (optional)
+
+Without this the surface falls back to pasting replies in. With it, it reads your mailbox directly.
+
+1. In the Google Cloud console, configure the OAuth consent screen as External, keep it in Testing,
+   add yourself as a test user, and add the `.../auth/gmail.readonly` scope.
+2. Create an OAuth client ID of type Desktop app, and note the client ID and secret.
+3. `python scripts/gmail_auth.py --client-id ... --client-secret ...`: opens Google's consent
+   screen and prints a refresh token. This is deliberately a human-run step — nothing in the
+   running system can obtain a token for itself.
+4. Put `GMAIL_CLIENT_ID`, `GMAIL_CLIENT_SECRET`, and `GMAIL_REFRESH_TOKEN` in `.env`, or set them
+   on Cloud Run with `--set-env-vars`.
+
 ### Deploy to Cloud Run
 
 Requires the `gcloud` CLI, a project with billing enabled, and
@@ -118,16 +133,21 @@ line at validation rather than by asking a prompt nicely; per-requirement suffic
 agent loop; the two-pass ATS executor for Greenhouse, Lever, and Ashby, whose page protocol has no
 submit method; the domain allowlist and the untrusted-text type.
 
-Also built: reading the replies an application gets. Paste them in and a tier-1 call labels each
-one, then the transition table from the specification's Appendix B decides what that does to the
-application. The split matters — the model proposes a label from a closed set, and a table it
-cannot reach decides the state, so an unrecognised message leaves the application exactly where it
-was rather than moving it somewhere invented. `GHOSTED` is unreachable from any message by
+Also built: reading the replies an application gets, from your actual mailbox. A tier-1 call
+labels each message, then the transition table from the specification's Appendix B decides what
+that does to the application. The split matters — the model proposes a label from a closed set, and
+a table it cannot reach decides the state, so an unrecognised message leaves the application exactly
+where it was rather than moving it somewhere invented. `GHOSTED` is unreachable from any message by
 construction, because it is derived from elapsed time; a test pins that.
 
+The mail connection asks for `gmail.readonly` and nothing else, so no token this system holds can
+send anything. Message bodies arrive as `UntrustedText` through the same allowlisted wrapper as
+every other outbound read, and an injection attempt in a message halts the read rather than
+reaching a model — mail is the most hostile input the system takes.
+
 Not built: the five specialist agents the specification describes are still stubs — the only
-agentic surface is the loop above. The inbox reader takes pasted text rather than connecting to
-Gmail, and it follows one application at a time; thread attribution, the scheduled triggers, and the
+agentic surface is the loop above. The inbox reader follows one application at a time; thread
+attribution across many applications, the scheduled triggers that would run it without you, and the
 silence threshold that produces `GHOSTED` were not built. Nothing scores opportunities and there is
 no analyst loop. Guardrail G4 is not enforced, and `/api/status` reports it as `pending` rather than
 claiming otherwise. The two-pass executor has never been run against a live posting, only against

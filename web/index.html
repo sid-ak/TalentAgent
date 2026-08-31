@@ -165,12 +165,21 @@
     <div class="divider"></div>
     <h2>4 · After you apply</h2>
     <p class="lede">
-      Paste the replies you got, separated by a line with three dashes. It works out where the
-      application actually stands — and it will not move anything on a message it doesn't
-      recognise. One thread at a time, for now.
+      It reads the replies in your inbox and works out where the application actually stands. It
+      will not move anything on a message it doesn't recognise — and it can only read. There is no
+      send permission on the connection at all.
     </p>
-    <textarea id="inbox" rows="5" placeholder="From: careers@example.com&#10;Thanks for applying, we'll review it.&#10;---&#10;From: recruiter@example.com&#10;Are you free Thursday for a quick call?"></textarea>
-    <button id="read">Read the replies</button>
+    <div id="inbox-connected" hidden>
+      <button id="sync">Read my inbox</button>
+    </div>
+    <div id="inbox-manual" hidden>
+      <p class="lede" style="color:var(--warn)">
+        Gmail isn't connected on this deployment yet, so paste the replies below instead,
+        separated by a line with three dashes.
+      </p>
+      <textarea id="inbox" rows="5" placeholder="From: careers@example.com&#10;Thanks for applying, we'll review it.&#10;---&#10;From: recruiter@example.com&#10;Are you free Thursday for a quick call?"></textarea>
+      <button id="read">Read the pasted replies</button>
+    </div>
     <div id="inbox-out"></div>
   </section>
 </main>
@@ -196,6 +205,8 @@ async function refreshStatus() {
     const p = $('p-model');
     p.textContent = s.gemini_connected ? `Gemini · ${s.models.tier_2}` : 'No API key · offline mode';
     p.className = 'pill ' + (s.gemini_connected ? 'on' : 'off');
+    $('inbox-connected').hidden = !s.gmail_connected;
+    $('inbox-manual').hidden = !!s.gmail_connected;
   } catch { /* header is cosmetic; the page still works */ }
 }
 
@@ -355,15 +366,13 @@ const STATE_TONE = {
   REJECTED: 'bad', OFFER: 'good', ONSITE: 'good', SCREEN: 'accent', GHOSTED: 'warn',
 };
 
-$('read').onclick = async () => {
-  const text = $('inbox').value.trim();
-  if (!text) return;
-  $('read').disabled = true;
-  $('inbox-out').innerHTML = '<div class="empty">Reading…</div>';
-  try {
-    const r = await api('/api/inbox/read', { text });
-    $('inbox-out').innerHTML = `
+function renderReading(r) {
+  const from = r.source === 'gmail'
+    ? `${r.fetched} message${r.fetched === 1 ? '' : 's'} read from your inbox`
+    : `${r.messages.length} pasted message${r.messages.length === 1 ? '' : 's'}`;
+  $('inbox-out').innerHTML = `
       <div class="card">
+        <div class="credit" style="border:0;padding:0;margin:0 0 8px">${esc(from)}</div>
         <div class="bullet-text">This application is at
           <span class="state ${STATE_TONE[r.final_state] || ''}">${esc(r.final_state)}</span>
         </div>
@@ -377,11 +386,25 @@ $('read').onclick = async () => {
           `).join('<br><br>')}
         </div>
       </div>`;
+}
+
+async function readInbox(path, payload, btn) {
+  btn.disabled = true;
+  $('inbox-out').innerHTML = '<div class="empty">Reading…</div>';
+  try {
+    renderReading(await api(path, payload));
   } catch (e) {
     $('inbox-out').innerHTML = `<div class="err">${esc(e.message)}</div>`;
   } finally {
-    $('read').disabled = false;
+    btn.disabled = false;
   }
+}
+
+$('sync').onclick = () => readInbox('/api/inbox/sync', {}, $('sync'));
+
+$('read').onclick = () => {
+  const text = $('inbox').value.trim();
+  if (text) readInbox('/api/inbox/read', { text }, $('read'));
 };
 
 refreshStatus();

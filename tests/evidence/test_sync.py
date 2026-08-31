@@ -1,5 +1,6 @@
 """Tests for evidence sync: ingest, clustering, metric attachment, and cursor state (Issue #22)."""
 
+from collections.abc import Mapping
 from pathlib import Path
 
 import pytest
@@ -26,7 +27,13 @@ def mock_fetcher() -> Fetcher:
     commits_body = (FIXTURE_API_DIR / "commits.json").read_bytes()
     pulls_body = (FIXTURE_API_DIR / "pulls.json").read_bytes()
 
-    def transport(url: str, timeout: float) -> bytes:
+    def transport(
+        url: str,
+        timeout: float,
+        *,
+        headers: Mapping[str, str] | None = None,
+        data: bytes | None = None,
+    ) -> bytes:
         if "commits" in url:
             return commits_body
         if "pulls" in url:

@@ -1,5 +1,7 @@
 """Pins the behaviour of the single outbound read path (issue #7)."""
 
+from collections.abc import Mapping
+
 import pytest
 from talentagent.net.fetch import AllowlistViolation, Fetcher, Transport, load_allowlist
 from talentagent.net.untrusted import InjectionAttempt, UntrustedText
@@ -8,7 +10,13 @@ from talentagent.net.untrusted import InjectionAttempt, UntrustedText
 def _transport(body: str) -> Transport:
     """Return a transport that always answers with `body`, so no network is touched."""
 
-    def transport(_url: str, _timeout: float) -> bytes:
+    def transport(
+        _url: str,
+        _timeout: float,
+        *,
+        headers: Mapping[str, str] | None = None,
+        data: bytes | None = None,
+    ) -> bytes:
         return body.encode()
 
     return transport
