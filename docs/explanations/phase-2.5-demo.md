@@ -123,9 +123,11 @@ the single loop above.
 
 The inbox reader takes pasted text rather than connecting to Gmail, and follows one application at a
 time. Thread attribution across many applications, the scheduled triggers that would make it run
-without you, and the silence threshold that produces `GHOSTED` are all still Phase 3. Nothing scores
-opportunities and no analyst loop exists — also Phase 3, and [the plan](../TalentAgent-Plan.md) says
-so plainly rather than implying otherwise.
+without you, and the silence threshold that produces `GHOSTED` were not built. Nothing scores
+opportunities and no analyst loop exists.
+
+None of that is queued work — [the plan](../TalentAgent-Plan.md) records it as scope that was
+specified and left unbuilt, which is a different and more honest claim than calling it upcoming.
 
 Guardrails G1, G2, G5, and G7 have real mechanisms with tests that fail when the mechanism is removed.
 G3 holds structurally, because the page protocol has no submit method. G4 is not enforced, and the

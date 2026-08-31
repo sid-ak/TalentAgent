@@ -127,12 +127,14 @@ construction, because it is derived from elapsed time; a test pins that.
 
 Not built: the five specialist agents the specification describes are still stubs — the only
 agentic surface is the loop above. The inbox reader takes pasted text rather than connecting to
-Gmail, and it follows one application at a time: thread attribution across many applications,
-the scheduled triggers, and the silence threshold that produces `GHOSTED` are all Phase 3. Nothing
-scores opportunities and there is no analyst loop. Guardrail G4 is not enforced, and `/api/status`
-reports it as `pending` rather than claiming otherwise.
+Gmail, and it follows one application at a time; thread attribution, the scheduled triggers, and the
+silence threshold that produces `GHOSTED` were not built. Nothing scores opportunities and there is
+no analyst loop. Guardrail G4 is not enforced, and `/api/status` reports it as `pending` rather than
+claiming otherwise. The two-pass executor has never been run against a live posting, only against
+fixture forms.
 
-[The plan](docs/TalentAgent-Plan.md) says which phase owns each of those.
+[The plan](docs/TalentAgent-Plan.md) records what each of those would involve, for anyone who
+picks the work up.
 
 ## Documentation
 

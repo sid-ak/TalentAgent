@@ -201,12 +201,19 @@ Exit criteria
 
 ---
 
-## 6. Phase 3: What remains
+## 6. Phase 3: What remains, unstarted
 
-Everything the earlier phases proved is now in place: forms fill themselves, every generated line is
-credited, and a person can review a package and answer a gap. What is left is the work that turns
-that into a system someone can run — three bodies of work, none of which blocks another, gathered
-into one phase because they are what remains rather than because they belong to one subject.
+TalentAgent shipped at Phase 2.5. This section is a record of specified-but-unbuilt scope, not a
+queue of work in progress: its issues are closed and its milestone is closed. It is kept because
+throwing away a design that took real thought costs nothing to retain and a great deal to
+reconstruct — anyone picking the work up, including a later version of the author, starts here
+rather than from scratch.
+
+Everything the earlier phases proved is in place: forms fill themselves, every generated line is
+credited, and a person can review a package and answer a gap. What is left is the work that would
+turn that into a system someone else can run — three bodies of work, none of which blocks another,
+gathered into one phase because they are what remains rather than because they belong to one
+subject.
 
 They are ordered here the way they feed each other. The inbound pipeline writes the outcome log the
 analyst reads, so real rows arriving alongside the backfill make the analyst's first findings more
@@ -214,7 +221,8 @@ informative; deployment comes last because it is what carries the other two, and
 system, to a real user. Nothing forces that order, though: the earlier phases are what all three
 depended on, so any of them can be picked up first.
 
-Goal: retire R3, R4, and R5, and pass the acceptance run. Spikes C, D, and E are all gated here.
+Goal, were it taken up: retire R3, R4, and R5, and pass the acceptance run. Spikes C, D, and E
+would all be gated here.
 
 ### 6.1 The autonomous inbound pipeline
 
