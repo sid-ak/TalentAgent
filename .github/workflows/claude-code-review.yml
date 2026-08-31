@@ -6,18 +6,14 @@ name: Claude Code Review
 # step rather than silently passing, which is the right way round.
 
 on:
-  pull_request:
-    types: [opened, synchronize, ready_for_review, reopened]
+  workflow_dispatch:
 
 concurrency:
-  # A rapid push sequence should produce one review of the final state, not a queue of reviews of
-  # states that no longer exist.
-  group: claude-review-${{ github.event.pull_request.number }}
+  group: claude-review-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
   claude-review:
-    if: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN != '' }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
