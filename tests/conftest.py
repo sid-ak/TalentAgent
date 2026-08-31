@@ -26,8 +26,9 @@ def _deny(*_args: object, **_kwargs: object) -> None:
     """Stand in for socket.socket, refusing every outbound connection attempt."""
     raise NetworkAccessDenied(
         "This test attempted an outbound network connection. The suite makes zero API calls "
-        "(ADR-0012): record a golden response with `python -m talentagent.models.record` and "
-        "replay it, or mark the test `@pytest.mark.network` if it needs the emulator."
+        "(ADR-0012): record a golden response through a client built with `record=True`, copy it "
+        "into tests/fixtures/golden/, or mark the test `@pytest.mark.network` if it needs the "
+        "emulator."
     )
 
 

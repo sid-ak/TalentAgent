@@ -99,6 +99,8 @@
     margin-top: 18px; padding-top: 12px;
   }
   .err { color: var(--bad); font-size: 12.5px; margin-top: 9px; }
+  .platform-row { display: flex; gap: 7px; flex-wrap: wrap; margin-bottom: 11px; }
+  .platform-row button { margin-top: 0; }
   @media (max-width: 1000px) { main { grid-template-columns: 1fr; } }
 </style>
 </head>
@@ -255,9 +257,45 @@ function renderPackage(run) {
     ${gaps ? `<div class="divider"></div><h2>${run.questions.length} thing${run.questions.length === 1 ? '' : 's'} it needs to ask you</h2>
       <p class="lede">It stopped here rather than making something up. Answer and it will
       try again with what you've told it.</p>${gaps}` : ''}
+    <div class="divider"></div>
+    <h2>Put it on the employer's form</h2>
+    <p class="lede">The agent fills the real form fields and stops. It has no way to press submit:
+      the code it drives has no submit button in it at all.</p>
+    <div class="platform-row">
+      <button class="ghost" data-fill="greenhouse">Greenhouse</button>
+      <button class="ghost" data-fill="lever">Lever</button>
+      <button class="ghost" data-fill="ashby">Ashby</button>
+    </div>
+    <div id="fill"></div>
     <div class="foot">
       Nothing here has been sent anywhere. Applying is always your call, never the agent's.
     </div>`;
+
+  $('out').querySelectorAll('[data-fill]').forEach((btn) => {
+    btn.onclick = async () => {
+      const platform = btn.dataset.fill;
+      $('fill').innerHTML = `<div class="empty">Filling the ${esc(platform)} form…</div>`;
+      try {
+        const r = await api('/api/ats-fill', { platform });
+        const pct = Math.round(r.completion_rate * 100);
+        $('fill').innerHTML = `
+          <div class="card">
+            <div class="bullet-text">${pct}% of the ${esc(platform)} form filled,
+              in ${r.passes} pass${r.passes === 1 ? '' : 'es'}.</div>
+            <div class="credit">
+              ${r.filled_fields.map((f) =>
+                `${esc(f.name)} &larr; ${esc(f.source || 'unmapped')}`).join('<br>')}
+              ${r.outstanding.length
+                ? `<br><br>left blank, nothing to fill it from:<br>${r.outstanding.map(esc).join('<br>')}`
+                : ''}
+              <br><br>submitted: ${r.submitted}
+            </div>
+          </div>`;
+      } catch (e) {
+        $('fill').innerHTML = `<div class="err">${esc(e.message)}</div>`;
+      }
+    };
+  });
 
   $('out').querySelectorAll('[data-answer]').forEach((btn) => {
     btn.onclick = async () => {

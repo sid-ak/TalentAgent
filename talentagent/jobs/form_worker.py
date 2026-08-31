@@ -36,7 +36,7 @@ _NO_TRANSPORT = (
     "run is issue #18."
 )
 """Why a run degrades when the model cannot be reached at all. The replay layer answers every
-question the fixtures cover, and Phase 5 wires the live transport behind it; until then a genuinely
+question the fixtures cover, and Phase 3 wires the live transport behind it; until then a genuinely
 novel question degrades the run rather than crashing it (Architecture 7).
 """
 

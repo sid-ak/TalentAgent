@@ -56,8 +56,10 @@ class GoldenResponseMissing(RuntimeError):
         self.key = key
         super().__init__(
             f"No golden response for {tier.value} call {key}. The suite makes zero API calls "
-            f"(ADR-0012). Record one with:\n"
-            f"    TALENTAGENT_RECORD=1 uv run python -m talentagent.models.record"
+            f"(ADR-0012). Record one by making the same call through a client built to record: "
+            f"`ModelClient(transport=..., record=True)`, or `build_live_client()` from "
+            f"`talentagent.models.live`, then copy the written file into "
+            f"tests/fixtures/golden/{tier.value}/."
         )
 
 

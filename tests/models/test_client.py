@@ -39,11 +39,16 @@ def test_replay_returns_the_recorded_response_and_makes_no_call(golden: Path) ->
     assert client.call(call) == {"is_job_related": True}
 
 
-def test_a_missing_fixture_names_the_recording_command(golden: Path) -> None:
-    """The failure a contributor sees tells them what to run, without reading the source."""
+def test_a_missing_fixture_names_a_real_recovery_path(golden: Path) -> None:
+    """The failure names something a contributor can actually run.
+
+    It previously named `python -m talentagent.models.record`, a module that does not exist, so
+    the documented recovery for the project's central quota control was a dead end.
+    """
     client = ModelClient(golden_root=golden)
-    with pytest.raises(GoldenResponseMissing, match="TALENTAGENT_RECORD=1"):
+    with pytest.raises(GoldenResponseMissing, match="record=True") as caught:
         client.tier_two("compose", {"requirement": "req_1"}, "package_v1")
+    assert "talentagent.models.record" not in str(caught.value)
 
 
 def test_the_key_is_stable_across_input_ordering() -> None:

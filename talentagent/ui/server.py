@@ -11,6 +11,7 @@ import http.server
 import io
 import json
 import mimetypes
+import os
 import tempfile
 from pathlib import Path
 from typing import Any
@@ -19,9 +20,13 @@ from urllib.parse import parse_qs, urlparse
 import pypdf
 
 from talentagent.agent.loop import extract_requirements, run_agent
+from talentagent.ats.executor import fill_form
 from talentagent.ats.fieldmap import load_map
+from talentagent.ats.halt import HaltedRun
+from talentagent.ats.offline import OfflineHtmlPage
+from talentagent.ats.platforms import PLATFORM_BY_HOST
 from talentagent.composer.compose import compose_package
-from talentagent.composer.package import Identity, Links, Materials
+from talentagent.composer.package import ApplicationPackage, Identity, Links, Materials
 from talentagent.evidence.elicitation import promote_statement
 from talentagent.evidence.graph import (
     Accomplishment,
@@ -39,6 +44,40 @@ from talentagent.models.live import TIER_MODELS, build_live_client
 DEFAULT_PORT = 8080
 """Default HTTP port for the UI review server."""
 
+GUARDRAIL_STATUS: dict[str, dict[str, str]] = {
+    "G1": {"name": "No model-originated claims", "status": "enforced"},
+    "G2": {"name": "No uncredited lines", "status": "enforced"},
+    "G3": {"name": "No irreversible autonomy; submit is human-only", "status": "enforced"},
+    "G4": {"name": "No suppression by self-derived signal", "status": "pending"},
+    "G5": {"name": "No prohibited automation", "status": "enforced"},
+    "G6": {"name": "No credential handling", "status": "vacuous"},
+    "G7": {"name": "Untrusted content treated as data", "status": "enforced"},
+}
+"""What each guardrail's enforcement actually amounts to today (Spec §10).
+
+`enforced` means a mechanism exists and a test fails when it is removed. `pending` means the
+mechanism has not been built: G4's test is an `xfail` reading "not yet enforced", and reporting it
+as active was the endpoint contradicting its own suite. `vacuous` means the invariant holds only
+because there is nothing yet to violate it — G6 is checked by scanning tool names in a registry no
+production path calls.
+"""
+
+ATS_PLATFORMS = frozenset(PLATFORM_BY_HOST.values())
+"""The ATS platforms with a field map, taken from the host table so the two cannot diverge."""
+
+ATS_FIXTURE_ROOT = Path(
+    os.environ.get(
+        "TALENTAGENT_ATS_FIXTURES",
+        Path(__file__).resolve().parent.parent.parent / "tests" / "fixtures" / "ats",
+    )
+)
+"""Where the demo's fillable forms live.
+
+Pass 2 runs against the same offline forms the Spike A gate is measured on, rather than a copy —
+a second set would drift from the one the gate reports, and then the demo and the number would
+be describing different things.
+"""
+
 MODEL_CLIENT = build_live_client()
 """The live Gemini client, or None when no API key is configured.
 
@@ -46,8 +85,15 @@ Built once at import: the whole surface either has a model or reports that it do
 every handler reads the same answer.
 """
 
-WEB_DIR = Path(__file__).resolve().parent.parent.parent / "web"
-"""Path to the static review surface served alongside the API."""
+WEB_DIR = Path(
+    os.environ.get("TALENTAGENT_WEB_DIR", Path(__file__).resolve().parent.parent.parent / "web")
+)
+"""Path to the static review surface served alongside the API.
+
+Overridable by `TALENTAGENT_WEB_DIR`, because the default is derived from this file's position in
+the source tree and stops being right the moment the package is installed rather than run in
+place — which is exactly what happens inside a container image.
+"""
 
 
 def get_all_nodes(store: EvidenceStore) -> list[Any]:
@@ -127,6 +173,27 @@ class CandidateSession:
 
 GLOBAL_SESSION = CandidateSession()
 """Singleton candidate session for the active application workflow."""
+
+
+def _session_package() -> ApplicationPackage:
+    """Build a package from the session's identity alone, for a form-fill with no composition.
+
+    Pass 2 fills the identity, links, and materials a field map names; the credited bullets are
+    not form fields. So a caller that wants to watch the form fill without composing first gets a
+    package carrying exactly what the map can reference, and nothing invented to pad it out.
+    """
+    materials = GLOBAL_SESSION.materials
+    if materials.resume is None or not Path(materials.resume).exists():
+        placeholder = Path(tempfile.mkdtemp(prefix="talentagent_resume_")) / "resume.pdf"
+        placeholder.write_bytes(b"%PDF-1.4 placeholder resume")
+        materials = Materials(resume=placeholder)
+
+    return ApplicationPackage(
+        posting_id="demo_posting",
+        identity=GLOBAL_SESSION.identity,
+        links=GLOBAL_SESSION.links,
+        materials=materials,
+    )
 
 
 class TalentAgentUIHandler(http.server.BaseHTTPRequestHandler):
@@ -235,15 +302,7 @@ class TalentAgentUIHandler(http.server.BaseHTTPRequestHandler):
                     "tier_1": TIER_MODELS[Tier.ONE][0],
                     "tier_2": TIER_MODELS[Tier.TWO][0],
                 },
-                "guardrails": {
-                    "G1": {"name": "No model-originated claims", "active": True},
-                    "G2": {"name": "No uncredited lines", "active": True},
-                    "G3": {"name": "No irreversible autonomy (human-only submit)", "active": True},
-                    "G4": {"name": "No suppression by self-derived signal", "active": True},
-                    "G5": {"name": "No prohibited automation (allowlist)", "active": True},
-                    "G6": {"name": "No credential handling", "active": True},
-                    "G7": {"name": "Untrusted content treated as data", "active": True},
-                },
+                "guardrails": GUARDRAIL_STATUS,
                 "quotas": quotas,
                 "platforms": ["greenhouse", "lever", "ashby"],
             },
@@ -513,95 +572,63 @@ class TalentAgentUIHandler(http.server.BaseHTTPRequestHandler):
         )
 
     def _handle_ats_fill(self, body: dict[str, Any]) -> None:
-        """Simulate Pass 2 deterministic ATS form execution with field resolution mapping."""
-        platform = body.get("platform", "greenhouse").lower()
-        package_dict = body.get("package", {})
+        """Run Pass 2 against a fixture form and report the completion it actually measured."""
+        platform = str(body.get("platform", "greenhouse")).lower()
+        if platform not in ATS_PLATFORMS:
+            self._send_error(400, f"Unknown platform {platform!r}")
+            return
 
-        ident = package_dict.get("identity", {})
-        first_name = ident.get("first_name") or GLOBAL_SESSION.identity.first_name or "Candidate"
-        last_name = ident.get("last_name") or GLOBAL_SESSION.identity.last_name or "User"
-        email = ident.get("email") or GLOBAL_SESSION.identity.email or "candidate@example.com"
-        phone = ident.get("phone") or GLOBAL_SESSION.identity.phone or "555-0199"
+        form = ATS_FIXTURE_ROOT / platform / "plain.html"
+        if not form.exists():
+            self._send_error(503, "Fixture forms are not present in this deployment")
+            return
 
+        package_data = body.get("package")
         try:
-            field_map = load_map(platform)
-            mapped_fields = [
-                {
-                    "selector": (
-                        rule.match_description
-                        if hasattr(rule, "match_description")
-                        else f"Field ({rule.path})"
-                    ),
-                    "target_path": rule.path,
-                    "resolved_type": "deterministic",
-                    "status": "filled",
-                }
-                for rule in field_map.rules
-            ]
-        except Exception:
-            mapped_fields = [
-                {
-                    "selector": "#first_name",
-                    "target_path": "identity.first_name",
-                    "resolved_type": "deterministic",
-                    "status": "filled",
-                    "value": first_name,
-                },
-                {
-                    "selector": "#last_name",
-                    "target_path": "identity.last_name",
-                    "resolved_type": "deterministic",
-                    "status": "filled",
-                    "value": last_name,
-                },
-                {
-                    "selector": "#email",
-                    "target_path": "identity.email",
-                    "resolved_type": "deterministic",
-                    "status": "filled",
-                    "value": email,
-                },
-                {
-                    "selector": "#phone",
-                    "target_path": "identity.phone",
-                    "resolved_type": "deterministic",
-                    "status": "filled",
-                    "value": phone,
-                },
-                {
-                    "selector": "#resume",
-                    "target_path": "materials.resume",
-                    "resolved_type": "deterministic",
-                    "status": "filled",
-                    "value": GLOBAL_SESSION.resume_filename or "Resume.pdf",
-                },
-            ]
+            package = (
+                ApplicationPackage.model_validate(package_data)
+                if package_data
+                else _session_package()
+            )
+        except ValueError as exc:
+            self._send_error(400, f"Could not read the application package: {exc}")
+            return
 
+        page = OfflineHtmlPage(form)
+        try:
+            result = fill_form(page, load_map(platform), package)
+            halted = None
+        except HaltedRun as exc:
+            result = exc.partial
+            halted = str(exc)
+
+        sources = result.log.sources()
         self._send_json(
             200,
             {
                 "platform": platform,
-                "completion_rate": 1.0,
-                "passes_required": 1,
-                "total_fields": len(mapped_fields),
-                "mapped_fields": mapped_fields,
-                "halt_reason": None,
-                "human_review_required": True,
-                "guardrail_g3": (
-                    "Autonomous submission is barred; human action required to submit."
-                ),
+                "form": f"{platform}/plain.html",
+                "completion_rate": round(result.completion.rate, 3),
+                "deterministic_share": round(result.completion.deterministic_share, 3),
+                "passes": result.passes,
+                "filled_fields": [
+                    {"name": value.name, "value": value.value, "source": sources.get(value.name)}
+                    for value in result.log.values
+                ],
+                "outstanding": [missed.name for missed in result.outstanding],
+                "halted": halted,
+                "submitted": result.submitted,
             },
         )
 
     def _serve_static(self, path: str) -> None:
-        """Serve static files from the Angular build directory with SPA fallback."""
+        """Serve static files from the web directory with SPA fallback."""
         if not WEB_DIR.exists():
             self._send_json(
                 200,
                 {
                     "message": "TalentAgent UI API Server is running.",
                     "status": "ready",
-                    "frontend_note": "Angular UI will be served once built.",
                 },
             )
             return

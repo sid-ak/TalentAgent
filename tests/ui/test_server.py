@@ -12,7 +12,7 @@ from talentagent.ui.server import GLOBAL_SESSION, TalentAgentUIHandler
 
 
 def test_status_endpoint() -> None:
-    """Status endpoint returns health, active guardrails, and quota metrics."""
+    """Status endpoint reports health, quotas, and each guardrail's true enforcement."""
     mock_server = MagicMock()
     mock_request = MagicMock()
 
@@ -34,9 +34,13 @@ def test_status_endpoint() -> None:
     status_code, data = sent_data[0]
     assert status_code == 200
     assert data["status"] == "healthy"
-    assert data["guardrails"]["G1"]["active"] is True
-    assert data["guardrails"]["G2"]["active"] is True
-    assert data["guardrails"]["G3"]["active"] is True
+    guardrails = data["guardrails"]
+    assert guardrails["G1"]["status"] == "enforced"
+    assert guardrails["G2"]["status"] == "enforced"
+    assert guardrails["G3"]["status"] == "enforced"
+    # G4's own test is an xfail reading "not yet enforced"; the endpoint must not outrank it.
+    assert guardrails["G4"]["status"] != "enforced"
+    assert guardrails["G6"]["status"] != "enforced"
     assert "quotas" in data
 
 

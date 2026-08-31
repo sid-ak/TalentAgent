@@ -1,7 +1,7 @@
 """TalentAgent interactive review surface and demo API server (Phase 2.5).
 
-Provides HTTP endpoints and static assets serving the Angular review UI for candidate profile
-management, evidence graph exploration, credited composition review, and ATS execution playback.
+Provides the HTTP endpoints and the static single-page review surface: candidate evidence
+capture, the agent loop over a posting, credited composition, and ATS form execution.
 """
 
 from __future__ import annotations
