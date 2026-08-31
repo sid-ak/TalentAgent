@@ -83,7 +83,7 @@ class RunCapture:
             "halted": self.halted,
             "completion": {
                 "rate": round(self.completion.rate, 4),
-                "map_rate": round(self.completion.map_rate, 4),
+                "deterministic_share": round(self.completion.deterministic_share, 4),
                 "by_map": self.completion.by_map,
                 "by_fallback": self.completion.by_fallback,
                 "unfilled": self.completion.unfilled,

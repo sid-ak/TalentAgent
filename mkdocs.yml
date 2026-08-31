@@ -53,6 +53,8 @@ nav:
   - Specification: TalentAgent-Spec.md
   - Architecture: TalentAgent-Architecture.md
   - Plan: TalentAgent-Plan.md
+  - Phase gates:
+      - Spike A - two-pass apply: gates/spike-a.md
   - Decision records:
       - ADRs/README.md
       - ADRs/0001-human-retains-irreversible-actions.md
