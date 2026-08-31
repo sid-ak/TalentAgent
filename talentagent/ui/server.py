@@ -349,6 +349,9 @@ class TalentAgentUIHandler(http.server.BaseHTTPRequestHandler):
             email=ident_data.get("email", GLOBAL_SESSION.identity.email),
             phone=ident_data.get("phone", GLOBAL_SESSION.identity.phone),
             location=ident_data.get("location", GLOBAL_SESSION.identity.location),
+            current_company=ident_data.get(
+                "current_company", GLOBAL_SESSION.identity.current_company
+            ),
         )
 
         GLOBAL_SESSION.links = Links(

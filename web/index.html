@@ -101,6 +101,13 @@
   .err { color: var(--bad); font-size: 12.5px; margin-top: 9px; }
   .platform-row { display: flex; gap: 7px; flex-wrap: wrap; margin-bottom: 11px; }
   .platform-row button { margin-top: 0; }
+  .id-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  .id-grid input {
+    background: var(--panel); color: var(--ink); border: 1px solid var(--line);
+    border-radius: 6px; padding: 8px 10px; font: 12.5px var(--sans); min-width: 0;
+  }
+  .id-grid input:focus { outline: none; border-color: var(--accent); }
+  .saved { font: 11px var(--mono); color: var(--good); margin-left: 9px; }
   .state {
     font: 11px/1 var(--mono); letter-spacing: .08em; padding: 4px 7px; border-radius: 4px;
     border: 1px solid var(--line); color: var(--ink-dim);
@@ -133,6 +140,24 @@
     </p>
     <textarea id="ev" rows="4" placeholder="Cut Kubernetes rollout time from 40 minutes to 6 by rewriting the deploy pipeline in Go."></textarea>
     <button id="add">Add this</button>
+
+    <div class="divider"></div>
+    <h2>Who you are</h2>
+    <p class="lede">
+      Only what an employer's form asks for. It is typed onto the form as-is, never rephrased.
+    </p>
+    <div class="id-grid">
+      <input id="first_name" placeholder="First name" autocomplete="given-name">
+      <input id="last_name" placeholder="Last name" autocomplete="family-name">
+      <input id="email" placeholder="Email" type="email" autocomplete="email">
+      <input id="phone" placeholder="Phone" autocomplete="tel">
+      <input id="location" placeholder="Location">
+      <input id="current_company" placeholder="Current employer">
+      <input id="linkedin" placeholder="LinkedIn URL">
+      <input id="github" placeholder="GitHub URL">
+    </div>
+    <button id="save-id" class="ghost">Save details</button>
+    <span id="id-saved" class="saved" hidden>saved</span>
     <div class="divider"></div>
     <h2>Your material</h2>
     <div id="nodes"><div class="empty">Nothing yet. Add something above.</div></div>
@@ -223,6 +248,29 @@ async function refreshGraph() {
           <div class="credit">in your own words</div>
         </div>`).join('');
 }
+
+// ── who you are ─────────────────────────────────────────────────
+const ID_FIELDS = ['first_name', 'last_name', 'email', 'phone', 'location', 'current_company'];
+const LINK_FIELDS = ['linkedin', 'github'];
+
+async function loadIdentity() {
+  try {
+    const p = await api('/api/profile');
+    ID_FIELDS.forEach((f) => { if (p.identity[f]) $(f).value = p.identity[f]; });
+    LINK_FIELDS.forEach((f) => { if (p.links[f]) $(f).value = p.links[f]; });
+  } catch { /* the form still works empty */ }
+}
+
+$('save-id').onclick = async () => {
+  const identity = {}; ID_FIELDS.forEach((f) => { identity[f] = $(f).value.trim(); });
+  const links = {}; LINK_FIELDS.forEach((f) => { links[f] = $(f).value.trim(); });
+  $('save-id').disabled = true;
+  try {
+    await api('/api/profile', { identity, links });
+    $('id-saved').hidden = false;
+    setTimeout(() => { $('id-saved').hidden = true; }, 2500);
+  } finally { $('save-id').disabled = false; }
+};
 
 // ── add evidence ────────────────────────────────────────────────
 $('add').onclick = async () => {
@@ -409,6 +457,7 @@ $('read').onclick = () => {
 
 refreshStatus();
 refreshGraph();
+loadIdentity();
 </script>
 </body>
 </html>
