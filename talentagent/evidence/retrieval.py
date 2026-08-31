@@ -51,6 +51,7 @@ _KNOWN_SKILL_KEYWORDS: dict[str, str] = {
     "k8s": "skill_kubernetes",
     "product strategy": "skill_product_strategy",
     "stakeholder management": "skill_stakeholder_management",
+    "stakeholder": "skill_stakeholder_management",
     "operations": "skill_operations",
     "rust": "skill_rust",
     "go": "skill_go",

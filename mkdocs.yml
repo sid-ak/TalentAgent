@@ -63,8 +63,10 @@ nav:
       - explanations/index.md
       - Phase 0 - foundations: explanations/phase-0-foundations.md
       - Phase 1 - two-pass apply: explanations/phase-1-two-pass-apply.md
+      - Phase 2 - evidence graph: explanations/phase-2-evidence-graph.md
   - Phase gates:
       - Spike A - two-pass apply: gates/spike-a.md
+      - Spike B - evidence graph: gates/spike-b.md
   - Code reference: reference/
   - Decision records:
       - ADRs/README.md
