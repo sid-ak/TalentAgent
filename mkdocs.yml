@@ -61,6 +61,7 @@ nav:
   - Plan: TalentAgent-Plan.md
   - Explanations:
       - explanations/index.md
+      - Phase 0 - foundations: explanations/phase-0-foundations.md
       - Phase 1 - two-pass apply: explanations/phase-1-two-pass-apply.md
   - Phase gates:
       - Spike A - two-pass apply: gates/spike-a.md
