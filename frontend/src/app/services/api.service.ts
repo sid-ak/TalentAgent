@@ -1,5 +1,5 @@
 /**
- * REST API client service for TalentAgent UI with offline fixture fallbacks.
+ * REST API client service for TalentAgent with real candidate session management.
  */
 
 import { Injectable } from '@angular/core';
@@ -17,6 +17,17 @@ import {
 export class ApiService {
   private baseUrl = '';
   public isConnected = false;
+
+  // Local fallback storage if server is unreachable
+  private localCandidate: CandidateProfile = {
+    identity: { first_name: '', last_name: '', email: '', phone: '', location: '' },
+    links: { github: '', linkedin: '', portfolio: '' },
+    resume_filename: null,
+    node_count: 0,
+    has_profile: false,
+  };
+  private localNodes: any[] = [];
+  private localEdges: any[] = [];
 
   constructor() {
     this.checkHealth();
@@ -48,8 +59,8 @@ export class ApiService {
 
     return {
       status: 'healthy (offline mode)',
-      phase: '2.5-Demo',
-      backend: 'mock-fixtures',
+      system: 'TalentAgent',
+      backend: 'local-session',
       gemini_connected: false,
       guardrails: {
         G1: { name: 'No model-originated claims (Quarantine enforced)', active: true },
@@ -61,156 +72,78 @@ export class ApiService {
         G7: { name: 'Untrusted content treated as data', active: true },
       },
       quotas: {
-        tier_1_used: 12,
+        tier_1_used: 0,
         tier_1_limit: 1000,
-        tier_2_used: 4,
+        tier_2_used: 0,
         tier_2_limit: 250,
       },
       platforms: ['greenhouse', 'lever', 'ashby'],
     };
   }
 
-  async getProfiles(): Promise<CandidateProfile[]> {
+  async getProfile(): Promise<CandidateProfile> {
     try {
-      const res = await fetch(`${this.baseUrl}/api/profiles`);
-      if (res.ok) {
-        const data = await res.json();
-        return data.profiles;
-      }
-    } catch {
-      // offline fallback
-    }
-
-    return [
-      {
-        id: 'profile_a',
-        name: 'Profile A (Distributed Systems Engineer)',
-        type: 'Technical / Repository-Backed',
-        description: 'Artifact-backed engineering profile with commits, PRs, and system design docs.',
-        node_count: 28,
-        attestation_classes: ['verifiable', 'corroborated'],
-        identity: {
-          first_name: 'Jordan',
-          last_name: 'Lee',
-          email: 'jordan.lee@example.com',
-          location: 'Seattle, WA',
-        },
-        links: {
-          github: 'https://github.com/jordanlee',
-          linkedin: 'https://linkedin.com/in/jordanlee',
-        },
-        materials: {
-          resume: 'Jordan_Lee_Resume.pdf',
-        },
-      },
-      {
-        id: 'profile_b',
-        name: 'Profile B (Principal Product Lead)',
-        type: 'Non-Engineering / Statement-Backed',
-        description: '100% attested statements with zero public software artifacts, proving no hallucination for non-coders.',
-        node_count: 18,
-        attestation_classes: ['attested'],
-        identity: {
-          first_name: 'Morgan',
-          last_name: 'Taylor',
-          email: 'morgan.taylor@example.com',
-          location: 'New York, NY',
-        },
-        links: {
-          linkedin: 'https://linkedin.com/in/morgantaylor',
-        },
-        materials: {
-          resume: 'Morgan_Taylor_CV.pdf',
-        },
-      },
-      {
-        id: 'custom',
-        name: 'Custom Candidate Profile',
-        type: 'User-Managed Profile',
-        description: 'Upload your resume PDF, add GitHub repos, or enter accomplishment statements directly in your own words.',
-        node_count: 6,
-        attestation_classes: ['verifiable', 'attested'],
-        identity: {
-          first_name: 'Alex',
-          last_name: 'Rivers',
-          email: 'alex.rivers@example.com',
-          location: 'San Francisco, CA',
-        },
-        links: {
-          github: 'https://github.com/alexrivers',
-          linkedin: 'https://linkedin.com/in/alexrivers',
-        },
-        materials: {
-          resume: 'Alex_Rivers_Resume.pdf',
-        },
-      },
-    ];
-  }
-
-  async getEvidenceGraph(profileId: string): Promise<GraphData> {
-    try {
-      const res = await fetch(`${this.baseUrl}/api/evidence-graph?profile_id=${profileId}`);
+      const res = await fetch(`${this.baseUrl}/api/profile`);
       if (res.ok) {
         return await res.json();
       }
     } catch {
-      // offline fallback
+      // fallback
+    }
+    return this.localCandidate;
+  }
+
+  async updateProfile(identity: any, links: any): Promise<CandidateProfile> {
+    try {
+      const res = await fetch(`${this.baseUrl}/api/profile`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ identity, links }),
+      });
+      if (res.ok) {
+        return await res.json();
+      }
+    } catch {
+      // fallback
     }
 
-    if (profileId === 'profile_b') {
-      return {
-        profile_id: 'profile_b',
-        quarantine_rule: 'G1: derived nodes are strictly quarantined from composer retrieval',
-        nodes: [
-          { id: 'stm_b1', type: 'statement', raw: 'Led product strategy and roadmap for enterprise multi-tenant analytics platform serving 40k weekly active users.', attestation_class: 'attested' },
-          { id: 'stm_b2', type: 'statement', raw: 'Negotiated cross-functional alignment across 14 executive stakeholders to launch privacy-first data ingestion.', attestation_class: 'attested' },
-          { id: 'acc_b1', type: 'accomplishment', claim: 'Directed multi-tenant enterprise analytics roadmap reaching 40k weekly active users', skills: ['skill_product_strategy', 'skill_stakeholder_management'], attestation_class: 'attested', evidence: ['stm_b1'] },
-          { id: 'acc_b2', type: 'accomplishment', claim: 'Aligned 14 executive stakeholders to ship zero-trust privacy data architecture', skills: ['skill_stakeholder_management', 'skill_operations'], attestation_class: 'attested', evidence: ['stm_b2'] },
-          { id: 'skill_product_strategy', type: 'skill', name: 'Product Strategy' },
-          { id: 'skill_stakeholder_management', type: 'skill', name: 'Stakeholder Management' },
-          { id: 'skill_operations', type: 'skill', name: 'Operations' },
-        ],
-        edges: [
-          { source: 'stm_b1', target: 'acc_b1', type: 'evidences' },
-          { source: 'stm_b2', target: 'acc_b2', type: 'evidences' },
-          { source: 'acc_b1', target: 'skill_product_strategy', type: 'demonstrates' },
-          { source: 'acc_b1', target: 'skill_stakeholder_management', type: 'demonstrates' },
-          { source: 'acc_b2', target: 'skill_stakeholder_management', type: 'demonstrates' },
-        ],
-      };
+    this.localCandidate.identity = identity;
+    this.localCandidate.links = links;
+    this.localCandidate.has_profile = Boolean(identity.first_name || identity.email || this.localNodes.length);
+    return this.localCandidate;
+  }
+
+  async resetProfile(): Promise<void> {
+    try {
+      await fetch(`${this.baseUrl}/api/profile/reset`, { method: 'POST' });
+    } catch {
+      // fallback
+    }
+    this.localCandidate = {
+      identity: { first_name: '', last_name: '', email: '', phone: '', location: '' },
+      links: { github: '', linkedin: '', portfolio: '' },
+      resume_filename: null,
+      node_count: 0,
+      has_profile: false,
+    };
+    this.localNodes = [];
+    this.localEdges = [];
+  }
+
+  async getEvidenceGraph(): Promise<GraphData> {
+    try {
+      const res = await fetch(`${this.baseUrl}/api/evidence-graph`);
+      if (res.ok) {
+        return await res.json();
+      }
+    } catch {
+      // fallback
     }
 
-    // Default Profile A / Custom
     return {
-      profile_id: profileId,
+      nodes: this.localNodes,
+      edges: this.localEdges,
       quarantine_rule: 'G1: derived nodes are strictly quarantined from composer retrieval',
-      nodes: [
-        { id: 'art_pr_412', type: 'artifact', subtype: 'PR', title: 'PR #412: Distributed Pub/Sub event bus', url: 'https://github.com/jordanlee/event-bus/pull/412', metadata: { summary: 'Zero data loss message pipeline handling 50k events/sec.' } },
-        { id: 'art_pr_419', type: 'artifact', subtype: 'PR', title: 'PR #419: JWT authentication & rate limiting', url: 'https://github.com/jordanlee/event-bus/pull/419', metadata: { summary: 'Implemented token rotation and Redis rate limiter.' } },
-        { id: 'art_doc_arch', type: 'artifact', subtype: 'DOC', title: 'RFC-089: Zero-downtime database migration strategy', url: 'https://docs.google.com/document/d/rfc089', metadata: { summary: 'Engineered dual-write shadow pipeline for PostgreSQL migration.' } },
-        { id: 'acc_1', type: 'accomplishment', claim: 'Engineered high-throughput distributed pub/sub event pipeline processing 50k events/sec with zero packet loss', skills: ['skill_python', 'skill_distributed_systems', 'skill_pubsub'], attestation_class: 'verifiable', evidence: ['art_pr_412'] },
-        { id: 'acc_2', type: 'accomplishment', claim: 'Architected zero-downtime database migration pipeline maintaining continuous uptime across 12M customer records', skills: ['skill_python', 'skill_distributed_systems', 'skill_migration'], attestation_class: 'verifiable', evidence: ['art_doc_arch'] },
-        { id: 'acc_3', type: 'accomplishment', claim: 'Implemented stateless JWT authentication layer and Redis rate limiting reducing unauthorized latency spikes by 60%', skills: ['skill_python', 'skill_auth'], attestation_class: 'verifiable', evidence: ['art_pr_419'] },
-        { id: 'acc_derived_candidate', type: 'accomplishment', claim: 'Inferred experience leading global cloud migration initiatives [UNCONFIRMED MODEL INFERENCE]', skills: ['skill_kubernetes'], attestation_class: 'derived', is_quarantined: true, evidence: ['art_doc_arch'] },
-        { id: 'skill_python', type: 'skill', name: 'Python' },
-        { id: 'skill_distributed_systems', type: 'skill', name: 'Distributed Systems' },
-        { id: 'skill_pubsub', type: 'skill', name: 'Pub/Sub' },
-        { id: 'skill_auth', type: 'skill', name: 'Authentication' },
-        { id: 'skill_migration', type: 'skill', name: 'Data Migration' },
-        { id: 'skill_kubernetes', type: 'skill', name: 'Kubernetes' },
-      ],
-      edges: [
-        { source: 'art_pr_412', target: 'acc_1', type: 'evidences' },
-        { source: 'art_doc_arch', target: 'acc_2', type: 'evidences' },
-        { source: 'art_pr_419', target: 'acc_3', type: 'evidences' },
-        { source: 'art_doc_arch', target: 'acc_derived_candidate', type: 'evidences' },
-        { source: 'acc_1', target: 'skill_python', type: 'demonstrates' },
-        { source: 'acc_1', target: 'skill_distributed_systems', type: 'demonstrates' },
-        { source: 'acc_1', target: 'skill_pubsub', type: 'demonstrates' },
-        { source: 'acc_2', target: 'skill_distributed_systems', type: 'demonstrates' },
-        { source: 'acc_2', target: 'skill_migration', type: 'demonstrates' },
-        { source: 'acc_3', target: 'skill_auth', type: 'demonstrates' },
-      ],
     };
   }
 
@@ -235,13 +168,12 @@ export class ApiService {
       .filter((l) => l.length > 15);
   }
 
-  async composePackage(profileId: string, postingId: string, requirements: string[], identity?: any): Promise<ApplicationPackage> {
+  async composePackage(postingId: string, requirements: string[], identity?: any): Promise<ApplicationPackage> {
     try {
       const res = await fetch(`${this.baseUrl}/api/compose`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          profile_id: profileId,
           posting_id: postingId,
           requirements: requirements,
           identity: identity,
@@ -255,83 +187,60 @@ export class ApiService {
       // offline fallback
     }
 
-    // Mock Offline Composed Package
-    const isAdversarial = postingId.includes('adversarial') || requirements.some(r => r.toLowerCase().includes('quantum') || r.toLowerCase().includes('blockchain'));
-    
-    if (isAdversarial) {
-      return {
-        posting_id: postingId,
-        identity: identity || { first_name: 'Test', last_name: 'Candidate', email: 'test@example.com' },
-        bullets: [],
-        screening_answers: [],
-        gaps: requirements.map((req, idx) => ({
-          requirement_id: `req_adv_${idx}`,
+    // Dynamic offline matching against local nodes
+    const bullets: any[] = [];
+    const gaps: any[] = [];
+
+    for (let idx = 0; idx < requirements.length; idx++) {
+      const req = requirements[idx];
+      const matchingNode = this.localNodes.find((n) => {
+        if (n.type !== 'accomplishment') return false;
+        const claim = (n.claim || '').toLowerCase();
+        const reqLower = req.toLowerCase();
+        const words = reqLower.split(/\s+/).filter((w: string) => w.length > 3);
+        return words.some((w: string) => claim.includes(w));
+      });
+
+      if (matchingNode) {
+        bullets.push({
+          text: matchingNode.claim,
+          credits: [matchingNode.id],
+          attestation_class: matchingNode.attestation_class || 'attested',
+          artifacts: matchingNode.evidence || [],
+          requirement_ids: [`req_${idx}`],
+        });
+      } else {
+        gaps.push({
+          requirement_id: `req_${idx}`,
           text: req,
           sufficiency: 0.0,
           action: 'ELICIT',
-          question: `Nothing in the evidence graph touches '${req}'. Have you worked on this, over what timeframe, what was your specific role vs the team's, and what quantitative outcome resulted?`,
-        })),
-        coverage: {
-          total: 0.0,
-          verifiable: 0.0,
-          corroborated: 0.0,
-          attested: 0.0,
-        },
-      };
+          question: `Nothing in your evidence graph touches '${req}'. Have you worked on this, over what timeframe, what was your specific role vs the team's, and what quantitative outcome resulted?`,
+        });
+      }
     }
 
     return {
       posting_id: postingId,
-      identity: identity || { first_name: 'Jordan', last_name: 'Lee', email: 'jordan.lee@example.com' },
-      bullets: [
-        {
-          text: 'Engineered high-throughput distributed pub/sub event pipeline processing 50k events/sec with zero packet loss.',
-          credits: ['acc_1'],
-          attestation_class: 'verifiable',
-          artifacts: ['art_pr_412'],
-          requirement_ids: ['req_1'],
-        },
-        {
-          text: 'Architected zero-downtime database migration pipeline maintaining continuous uptime across 12M customer records.',
-          credits: ['acc_2'],
-          attestation_class: 'verifiable',
-          artifacts: ['art_doc_arch'],
-          requirement_ids: ['req_2'],
-        },
-      ],
-      screening_answers: [
-        {
-          question: 'Do you have experience with Python and distributed systems?',
-          answer: 'Yes, architected distributed pub/sub event pipelines handling 50k events/sec in Python.',
-          credits: ['acc_1'],
-          attestation_class: 'verifiable',
-        },
-      ],
-      gaps: [
-        {
-          requirement_id: 'req_k8s',
-          text: '5+ years experience managing Kubernetes cluster orchestration in production',
-          sufficiency: 0.0,
-          action: 'ELICIT',
-          question: "Nothing in the evidence graph touches 'Kubernetes cluster orchestration'. Have you worked on this, over what timeframe, what was your specific role vs the team's, and what quantitative outcome resulted?",
-        },
-      ],
+      identity: identity || this.localCandidate.identity,
+      bullets: bullets,
+      screening_answers: [],
+      gaps: gaps,
       coverage: {
-        total: 1.0,
-        verifiable: 1.0,
-        corroborated: 0.0,
-        attested: 0.0,
+        total: requirements.length > 0 ? bullets.length / requirements.length : 0,
+        verifiable: bullets.filter((b) => b.attestation_class === 'verifiable').length / (requirements.length || 1),
+        corroborated: 0,
+        attested: bullets.filter((b) => b.attestation_class === 'attested').length / (requirements.length || 1),
       },
     };
   }
 
-  async promoteStatement(profileId: string, answer: string, requirementText?: string, skills: string[] = []): Promise<any> {
+  async promoteStatement(answer: string, requirementText?: string, skills: string[] = []): Promise<any> {
     try {
       const res = await fetch(`${this.baseUrl}/api/promote-statement`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          profile_id: profileId,
           answer: answer,
           requirement_text: requirementText,
           skills: skills,
@@ -344,10 +253,17 @@ export class ApiService {
       // offline fallback
     }
 
+    const stmId = `stm_${Date.now() % 10000}`;
+    const accId = `acc_${Date.now() % 10000}`;
+    this.localNodes.push({ id: stmId, type: 'statement', raw: answer, attestation_class: 'attested' });
+    this.localNodes.push({ id: accId, type: 'accomplishment', claim: answer.split('\n')[0], attestation_class: 'attested', evidence: [stmId] });
+    this.localEdges.push({ source: stmId, target: accId, type: 'evidences' });
+    this.localCandidate.node_count = this.localNodes.length;
+
     return {
       status: 'promoted',
-      statement_id: `stm_${Date.now() % 10000}`,
-      accomplishment_id: `acc_${Date.now() % 10000}`,
+      statement_id: stmId,
+      accomplishment_id: accId,
       raw_text: answer,
       attestation_class: 'attested',
     };
@@ -371,12 +287,24 @@ export class ApiService {
       // offline fallback
     }
 
+    this.localCandidate.resume_filename = filename;
+    const lines = (text || 'Engineered cloud infrastructure and APIs\nDesigned high-throughput data pipelines')
+      .split('\n')
+      .filter((l) => l.trim().length > 15);
+
+    for (const line of lines) {
+      const accId = `acc_${Date.now() % 10000}_${Math.floor(Math.random() * 1000)}`;
+      this.localNodes.push({ id: accId, type: 'accomplishment', claim: line.trim(), attestation_class: 'attested' });
+    }
+    this.localCandidate.node_count = this.localNodes.length;
+    this.localCandidate.has_profile = true;
+
     return {
       status: 'success',
       filename: filename,
       extracted_length: text ? text.length : 1200,
-      nodes_added: 4,
-      total_custom_nodes: 10,
+      nodes_added: lines.length,
+      total_nodes: this.localNodes.length,
     };
   }
 
@@ -394,10 +322,18 @@ export class ApiService {
       // offline fallback
     }
 
+    const stmId = `stm_${Date.now() % 10000}`;
+    const accId = `acc_${Date.now() % 10000}`;
+    this.localNodes.push({ id: stmId, type: 'statement', raw: rawText, attestation_class: 'attested' });
+    this.localNodes.push({ id: accId, type: 'accomplishment', claim: rawText.split('\n')[0], skills: skills, attestation_class: 'attested', evidence: [stmId] });
+    this.localEdges.push({ source: stmId, target: accId, type: 'evidences' });
+    this.localCandidate.node_count = this.localNodes.length;
+    this.localCandidate.has_profile = true;
+
     return {
       status: 'added',
-      statement_id: `stm_${Date.now() % 10000}`,
-      accomplishment_id: `acc_${Date.now() % 10000}`,
+      statement_id: stmId,
+      accomplishment_id: accId,
       attestation_class: 'attested',
     };
   }
@@ -416,10 +352,18 @@ export class ApiService {
       // offline fallback
     }
 
+    const artId = `art_gh_${Date.now() % 10000}`;
+    const accId = `acc_gh_${Date.now() % 10000}`;
+    this.localNodes.push({ id: artId, type: 'artifact', title: `Core architectural contributions to ${username}/${repo}`, subtype: 'PR', url: `https://github.com/${username}/${repo}` });
+    this.localNodes.push({ id: accId, type: 'accomplishment', claim: `Built core services and infrastructure for ${username}/${repo}`, attestation_class: 'verifiable', evidence: [artId] });
+    this.localEdges.push({ source: artId, target: accId, type: 'evidences' });
+    this.localCandidate.node_count = this.localNodes.length;
+    this.localCandidate.has_profile = true;
+
     return {
       status: 'synced',
-      artifact_id: `art_gh_${Date.now() % 10000}`,
-      accomplishment_id: `acc_gh_${Date.now() % 10000}`,
+      artifact_id: artId,
+      accomplishment_id: accId,
       attestation_class: 'verifiable',
     };
   }
@@ -442,14 +386,13 @@ export class ApiService {
       platform: platform,
       completion_rate: 1.0,
       passes_required: 1,
-      total_fields: 6,
+      total_fields: 5,
       mapped_fields: [
-        { selector: '#first_name', target_path: 'identity.first_name', resolved_type: 'deterministic', status: 'filled', value: pkg.identity.first_name },
-        { selector: '#last_name', target_path: 'identity.last_name', resolved_type: 'deterministic', status: 'filled', value: pkg.identity.last_name },
-        { selector: '#email', target_path: 'identity.email', resolved_type: 'deterministic', status: 'filled', value: pkg.identity.email },
-        { selector: '#phone', target_path: 'identity.phone', resolved_type: 'deterministic', status: 'filled', value: pkg.identity.phone || '415-555-0199' },
+        { selector: '#first_name', target_path: 'identity.first_name', resolved_type: 'deterministic', status: 'filled', value: pkg.identity.first_name || 'Candidate' },
+        { selector: '#last_name', target_path: 'identity.last_name', resolved_type: 'deterministic', status: 'filled', value: pkg.identity.last_name || 'User' },
+        { selector: '#email', target_path: 'identity.email', resolved_type: 'deterministic', status: 'filled', value: pkg.identity.email || 'candidate@example.com' },
+        { selector: '#phone', target_path: 'identity.phone', resolved_type: 'deterministic', status: 'filled', value: pkg.identity.phone || '555-0199' },
         { selector: '#resume_upload', target_path: 'materials.resume', resolved_type: 'deterministic', status: 'filled', value: pkg.materials?.resume || 'Resume.pdf' },
-        { selector: '#custom_question_1', target_path: 'screening_answers[0]', resolved_type: 'model_fallback', status: 'filled', value: pkg.screening_answers[0]?.answer || 'Yes, verified experience.' },
       ],
       halt_reason: null,
       human_review_required: true,

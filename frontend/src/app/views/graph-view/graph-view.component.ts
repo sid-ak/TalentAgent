@@ -1,4 +1,4 @@
-import { Component, Input, OnChanges, OnInit, SimpleChanges } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ApiService } from '../../services/api.service';
 import { EvidenceEdge, EvidenceNode, GraphData } from '../../models/talentagent.models';
@@ -17,40 +17,49 @@ import { EvidenceEdge, EvidenceNode, GraphData } from '../../models/talentagent.
           </p>
         </div>
 
-        <div class="filter-group">
+        <div class="filter-group" *ngIf="graphData && graphData.nodes.length > 0">
           <button
             class="filter-btn"
             [class.active]="selectedClassFilter === 'all'"
             (click)="setFilter('all')"
           >
-            All Nodes ({{ graphData?.nodes?.length || 0 }})
+            All Nodes ({{ graphData.nodes.length }})
           </button>
           <button
             class="filter-btn verifiable"
             [class.active]="selectedClassFilter === 'verifiable'"
             (click)="setFilter('verifiable')"
           >
-            Verifiable (Public PRs)
+            Verifiable
           </button>
           <button
             class="filter-btn attested"
             [class.active]="selectedClassFilter === 'attested'"
             (click)="setFilter('attested')"
           >
-            Attested (Statements)
+            Attested
           </button>
           <button
             class="filter-btn derived"
             [class.active]="selectedClassFilter === 'derived'"
             (click)="setFilter('derived')"
           >
-            Quarantined (Derived AI)
+            Quarantined (Derived)
           </button>
         </div>
       </div>
 
+      <!-- Empty State if no nodes exist -->
+      <div *ngIf="!graphData || graphData.nodes.length === 0" class="empty-graph glass-panel">
+        <div class="empty-icon">🕸️</div>
+        <h3>Evidence Graph is Empty</h3>
+        <p class="empty-sub">
+          Your career evidence graph will appear here as soon as you upload a resume or record accomplishment statements in the <strong>Candidate Profile</strong> tab.
+        </p>
+      </div>
+
       <!-- Graph Canvas Visualizer Layout -->
-      <div class="canvas-layout">
+      <div *ngIf="graphData && graphData.nodes.length > 0" class="canvas-layout">
         <!-- Main Visual Graph SVG Area -->
         <div class="svg-stage glass-panel">
           <div class="quarantine-banner">
@@ -215,6 +224,26 @@ import { EvidenceEdge, EvidenceNode, GraphData } from '../../models/talentagent.
     .filter-btn.attested.active { border-color: #a78bfa; color: #a78bfa; }
     .filter-btn.derived.active { border-color: #fb7185; color: #fb7185; }
 
+    .empty-graph {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--text-muted);
+    }
+    .empty-icon {
+      font-size: 3rem;
+      margin-bottom: 12px;
+    }
+    .empty-graph h3 {
+      font-size: 1.2rem;
+      color: var(--text-secondary);
+      margin-bottom: 6px;
+    }
+    .empty-sub {
+      font-size: 0.9rem;
+      max-width: 500px;
+      margin: 0 auto;
+    }
+
     .canvas-layout {
       display: grid;
       grid-template-columns: 1fr 340px;
@@ -344,9 +373,7 @@ import { EvidenceEdge, EvidenceNode, GraphData } from '../../models/talentagent.
     }
   `],
 })
-export class GraphViewComponent implements OnInit, OnChanges {
-  @Input() selectedProfileId: string = 'profile_a';
-
+export class GraphViewComponent implements OnInit {
   graphData: GraphData | null = null;
   selectedClassFilter: string = 'all';
   selectedNode: EvidenceNode | null = null;
@@ -359,16 +386,10 @@ export class GraphViewComponent implements OnInit, OnChanges {
     await this.loadGraph();
   }
 
-  async ngOnChanges(changes: SimpleChanges): Promise<void> {
-    if (changes['selectedProfileId']) {
-      await this.loadGraph();
-    }
-  }
-
   async loadGraph(): Promise<void> {
-    this.graphData = await this.apiService.getEvidenceGraph(this.selectedProfileId);
+    this.graphData = await this.apiService.getEvidenceGraph();
     this.layoutNodes();
-    if (this.graphData.nodes?.length > 0) {
+    if (this.graphData?.nodes?.length > 0) {
       this.selectedNode = this.graphData.nodes[0];
     }
   }
@@ -404,28 +425,24 @@ export class GraphViewComponent implements OnInit, OnChanges {
 
     for (const node of this.graphData.nodes) {
       if (node.is_quarantined || node.attestation_class === 'derived') {
-        // Place in quarantine zone on the right
         this.nodePositions[node.id] = {
           x: 750,
           y: 120 + derivedIndex * 100,
         };
         derivedIndex++;
       } else if (node.type === 'artifact' || node.type === 'statement') {
-        // Left Column (Sources)
         this.nodePositions[node.id] = {
           x: 100,
           y: 90 + artIndex * 90,
         };
         artIndex++;
       } else if (node.type === 'accomplishment') {
-        // Middle Column (Accomplishments)
         this.nodePositions[node.id] = {
           x: 320,
           y: 100 + accIndex * 110,
         };
         accIndex++;
       } else {
-        // Right-Middle Column (Skills / Metrics)
         this.nodePositions[node.id] = {
           x: 520,
           y: 80 + skillIndex * 70,

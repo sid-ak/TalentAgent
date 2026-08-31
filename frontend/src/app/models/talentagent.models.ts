@@ -1,5 +1,5 @@
 /**
- * Data models and interfaces for the TalentAgent UI (Phase 2.5).
+ * Data models and interfaces for the TalentAgent user interface.
  */
 
 export type AttestationClass = 'verifiable' | 'corroborated' | 'attested' | 'derived';
@@ -26,15 +26,11 @@ export interface Materials {
 }
 
 export interface CandidateProfile {
-  id: string;
-  name: string;
-  type: string;
-  description: string;
-  node_count: number;
-  attestation_classes: string[];
   identity: Identity;
-  links?: Links;
-  materials?: Materials;
+  links: Links;
+  resume_filename?: string | null;
+  node_count: number;
+  has_profile: boolean;
 }
 
 export interface EvidenceNode {
@@ -65,7 +61,6 @@ export interface EvidenceEdge {
 }
 
 export interface GraphData {
-  profile_id: string;
   nodes: EvidenceNode[];
   edges: EvidenceEdge[];
   quarantine_rule?: string;
@@ -137,7 +132,7 @@ export interface GuardrailInfo {
 
 export interface SystemStatus {
   status: string;
-  phase: string;
+  system: string;
   backend: string;
   gemini_connected: boolean;
   guardrails: Record<string, GuardrailInfo>;

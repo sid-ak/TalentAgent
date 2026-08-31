@@ -1,7 +1,7 @@
-"""HTTP server and REST API for the TalentAgent interactive review surface (Spec §5.5, Phase 2.5).
+"""HTTP server and REST API for the TalentAgent user review surface and workflow engine.
 
 Provides endpoints for candidate profile management, evidence graph exploration, credited
-package composition, interactive live elicitation, and ATS execution playback.
+package composition, interactive live elicitation, and ATS execution.
 """
 
 from __future__ import annotations
@@ -17,7 +17,6 @@ from typing import Any
 from urllib.parse import parse_qs, urlparse
 
 import pypdf
-from tests.fixtures.evidence.seeding import seed_profile_a, seed_profile_b
 
 from talentagent.ats.fieldmap import load_map
 from talentagent.composer.compose import compose_package
@@ -35,7 +34,7 @@ from talentagent.evidence.graph import (
     Skill,
     Statement,
 )
-from talentagent.evidence.retrieval import normalise_requirement
+from talentagent.evidence.retrieval import _KNOWN_SKILL_KEYWORDS, normalise_requirement
 from talentagent.evidence.store import EvidenceStore, LocalEvidenceStore
 from talentagent.models.live import get_live_client
 
@@ -66,106 +65,72 @@ def get_all_nodes(store: EvidenceStore) -> list[Any]:
     return list(store.active())
 
 
-class DemoStores:
-    """Manages isolated in-memory stores for Profile A, Profile B, and Custom candidates."""
+def _extract_and_save_skills(
+    store: EvidenceStore, text: str, explicit_skills: list[str] | None = None
+) -> list[str]:
+    """Extract, save, and return normalized skill node IDs from text and input skills."""
+    skill_ids: set[str] = set()
+    if explicit_skills:
+        for s in explicit_skills:
+            s_clean = s.strip().lower()
+            if not s_clean:
+                continue
+            if s_clean in _KNOWN_SKILL_KEYWORDS:
+                sk_id = _KNOWN_SKILL_KEYWORDS[s_clean]
+            elif s.startswith("skill_"):
+                sk_id = s
+            else:
+                sk_id = f"skill_{s_clean.replace(' ', '_')}"
+            skill_ids.add(sk_id)
+            store.save_node(Skill(id=sk_id, name=s.strip()))
+
+    text_lower = text.lower()
+    for kw, sk_id in _KNOWN_SKILL_KEYWORDS.items():
+        if kw in text_lower:
+            skill_ids.add(sk_id)
+            store.save_node(Skill(id=sk_id, name=kw.title()))
+
+    return sorted(skill_ids)
+
+
+class CandidateSession:
+    """Manages the candidate's active evidence store, identity, and materials."""
 
     def __init__(self) -> None:
-        """Initialize and seed demo stores in temporary directories."""
-        self._tmp_a = tempfile.mkdtemp(prefix="store_a_")
-        self._tmp_b = tempfile.mkdtemp(prefix="store_b_")
-        self._tmp_custom = tempfile.mkdtemp(prefix="store_custom_")
+        """Initialize a local evidence store and default candidate state."""
+        self._tmp_dir = tempfile.mkdtemp(prefix="talentagent_candidate_")
+        self.store: EvidenceStore = LocalEvidenceStore(Path(self._tmp_dir))
 
-        self.profile_a = LocalEvidenceStore(Path(self._tmp_a))
-        seed_profile_a(self.profile_a)
-
-        self.profile_b = LocalEvidenceStore(Path(self._tmp_b))
-        seed_profile_b(self.profile_b)
-
-        self.custom = LocalEvidenceStore(Path(self._tmp_custom))
-        self._seed_default_custom()
-
-        self.custom_identity = Identity(
-            first_name="Alex",
-            last_name="Rivers",
-            email="alex.rivers@example.com",
-            phone="415-555-0199",
-            location="San Francisco, CA",
+        self.identity = Identity(
+            first_name="",
+            last_name="",
+            email="",
+            phone="",
+            location="",
         )
-        self.custom_links = Links(
-            github="https://github.com/alexrivers",
-            linkedin="https://linkedin.com/in/alexrivers",
-            portfolio="https://alexrivers.dev",
+        self.links = Links(
+            github="",
+            linkedin="",
+            portfolio="",
         )
-        self.custom_materials = Materials(resume=Path("Alex_Rivers_Resume.pdf"))
+        self.materials = Materials()
+        self.resume_filename: str | None = None
 
-        self.tier_1_calls = 4
-        self.tier_2_calls = 2
+        self.tier_1_calls = 0
+        self.tier_2_calls = 0
 
-    def _seed_default_custom(self) -> None:
-        """Seed initial custom candidate profile with sample verifiable and attested nodes."""
-        skill_python = Skill(id="skill_python", name="Python")
-        skill_fastapi = Skill(id="skill_fastapi", name="FastAPI")
-        skill_cloud = Skill(id="skill_cloud", name="Cloud Infrastructure")
-        for s in (skill_python, skill_fastapi, skill_cloud):
-            self.custom.save_node(s)
-
-        art = Artifact(
-            id="art_custom_pr_101",
-            subtype=ArtifactSubtype.PR,
-            title="Optimized query execution engine",
-            url="https://github.com/alexrivers/query-engine/pull/101",
-            metadata={"summary": "Reduced p99 query latency by 45% using streaming buffer pools."},
-        )
-        self.custom.save_node(art)
-
-        acc_1 = Accomplishment(
-            id="acc_custom_1",
-            claim="Optimized query engine latency by 45% using streaming buffer pools",
-            skills=["skill_python", "skill_cloud"],
-            evidence=["art_custom_pr_101"],
-            attestation_class=AttestationClass.VERIFIABLE,
-        )
-        self.custom.save_node(acc_1)
-
-        self.custom.save_edge(
-            Edge(
-                source_id="art_custom_pr_101",
-                source_type=NodeType.ARTIFACT,
-                target_id="acc_custom_1",
-                target_type=NodeType.ACCOMPLISHMENT,
-                edge_type=EdgeType.EVIDENCES,
-            )
-        )
-        self.custom.save_edge(
-            Edge(
-                source_id="acc_custom_1",
-                source_type=NodeType.ACCOMPLISHMENT,
-                target_id="skill_python",
-                target_type=NodeType.SKILL,
-                edge_type=EdgeType.DEMONSTRATES,
-            )
-        )
-        self.custom.save_edge(
-            Edge(
-                source_id="acc_custom_1",
-                source_type=NodeType.ACCOMPLISHMENT,
-                target_id="skill_cloud",
-                target_type=NodeType.SKILL,
-                edge_type=EdgeType.DEMONSTRATES,
-            )
-        )
-
-    def get_store(self, profile_id: str) -> EvidenceStore:
-        """Return the EvidenceStore corresponding to the profile identifier."""
-        if profile_id == "profile_a":
-            return self.profile_a
-        if profile_id == "profile_b":
-            return self.profile_b
-        return self.custom
+    def reset(self) -> None:
+        """Reset the session store and candidate state."""
+        self._tmp_dir = tempfile.mkdtemp(prefix="talentagent_candidate_")
+        self.store = LocalEvidenceStore(Path(self._tmp_dir))
+        self.identity = Identity(first_name="", last_name="", email="", phone="", location="")
+        self.links = Links(github="", linkedin="", portfolio="")
+        self.materials = Materials()
+        self.resume_filename = None
 
 
-GLOBAL_STORES = DemoStores()
-"""Singleton demo store holding candidate profiles and usage statistics."""
+GLOBAL_SESSION = CandidateSession()
+"""Singleton candidate session for the active application workflow."""
 
 
 class TalentAgentUIHandler(http.server.BaseHTTPRequestHandler):
@@ -202,15 +167,14 @@ class TalentAgentUIHandler(http.server.BaseHTTPRequestHandler):
         """Handle GET requests for API endpoints and static assets."""
         parsed = urlparse(self.path)
         path = parsed.path
-        query = parse_qs(parsed.query)
+        parse_qs(parsed.query)
 
         if path == "/api/status":
             self._handle_status()
-        elif path == "/api/profiles":
-            self._handle_profiles()
+        elif path == "/api/profile":
+            self._handle_get_profile()
         elif path == "/api/evidence-graph":
-            profile_id = query.get("profile_id", ["profile_a"])[0]
-            self._handle_evidence_graph(profile_id)
+            self._handle_evidence_graph()
         else:
             self._serve_static(path)
 
@@ -228,18 +192,22 @@ class TalentAgentUIHandler(http.server.BaseHTTPRequestHandler):
             self._send_error(400, "Invalid JSON payload")
             return
 
-        if path == "/api/extract-requirements":
-            self._handle_extract_requirements(body)
-        elif path == "/api/compose":
-            self._handle_compose(body)
-        elif path == "/api/promote-statement":
-            self._handle_promote_statement(body)
+        if path == "/api/profile":
+            self._handle_update_profile(body)
         elif path == "/api/profile/upload-resume":
             self._handle_upload_resume(body)
         elif path == "/api/profile/add-statement":
             self._handle_add_statement(body)
         elif path == "/api/profile/sync-github":
             self._handle_sync_github(body)
+        elif path == "/api/profile/reset":
+            self._handle_reset_profile()
+        elif path == "/api/extract-requirements":
+            self._handle_extract_requirements(body)
+        elif path == "/api/compose":
+            self._handle_compose(body)
+        elif path == "/api/promote-statement":
+            self._handle_promote_statement(body)
         elif path == "/api/ats-fill":
             self._handle_ats_fill(body)
         else:
@@ -252,7 +220,7 @@ class TalentAgentUIHandler(http.server.BaseHTTPRequestHandler):
             200,
             {
                 "status": "healthy",
-                "phase": "2.5-Demo",
+                "system": "TalentAgent",
                 "backend": "python",
                 "gemini_connected": has_gemini,
                 "guardrails": {
@@ -265,76 +233,62 @@ class TalentAgentUIHandler(http.server.BaseHTTPRequestHandler):
                     "G7": {"name": "Untrusted content treated as data", "active": True},
                 },
                 "quotas": {
-                    "tier_1_used": GLOBAL_STORES.tier_1_calls,
+                    "tier_1_used": GLOBAL_SESSION.tier_1_calls,
                     "tier_1_limit": DAILY_TIER_1_QUOTA,
-                    "tier_2_used": GLOBAL_STORES.tier_2_calls,
+                    "tier_2_used": GLOBAL_SESSION.tier_2_calls,
                     "tier_2_limit": DAILY_TIER_2_QUOTA,
                 },
                 "platforms": ["greenhouse", "lever", "ashby"],
             },
         )
 
-    def _handle_profiles(self) -> None:
-        """Return metadata summaries for all candidate profiles."""
-        store_a_nodes = len(get_all_nodes(GLOBAL_STORES.profile_a))
-        store_b_nodes = len(get_all_nodes(GLOBAL_STORES.profile_b))
-        custom_nodes = len(get_all_nodes(GLOBAL_STORES.custom))
-
+    def _handle_get_profile(self) -> None:
+        """Return candidate profile details, links, and node metrics."""
+        nodes = get_all_nodes(GLOBAL_SESSION.store)
         self._send_json(
             200,
             {
-                "profiles": [
-                    {
-                        "id": "profile_a",
-                        "name": "Profile A (Distributed Systems Engineer)",
-                        "type": "Technical / Repository-Backed",
-                        "description": (
-                            "Artifact-backed engineering profile with commits, PRs, and docs."
-                        ),
-                        "node_count": store_a_nodes,
-                        "attestation_classes": ["verifiable", "corroborated"],
-                        "identity": {
-                            "first_name": "Jordan",
-                            "last_name": "Lee",
-                            "email": "jordan.lee@example.com",
-                            "location": "Seattle, WA",
-                        },
-                    },
-                    {
-                        "id": "profile_b",
-                        "name": "Profile B (Principal Product Lead)",
-                        "type": "Non-Engineering / Statement-Backed",
-                        "description": (
-                            "100% attested statements with zero public software artifacts."
-                        ),
-                        "node_count": store_b_nodes,
-                        "attestation_classes": ["attested"],
-                        "identity": {
-                            "first_name": "Morgan",
-                            "last_name": "Taylor",
-                            "email": "morgan.taylor@example.com",
-                            "location": "New York, NY",
-                        },
-                    },
-                    {
-                        "id": "custom",
-                        "name": "Custom Candidate Profile",
-                        "type": "User-Managed Profile",
-                        "description": (
-                            "Upload your resume PDF, add GitHub repos, or enter statements."
-                        ),
-                        "node_count": custom_nodes,
-                        "attestation_classes": ["verifiable", "attested"],
-                        "identity": GLOBAL_STORES.custom_identity.model_dump(),
-                        "links": GLOBAL_STORES.custom_links.model_dump(),
-                    },
-                ]
+                "identity": GLOBAL_SESSION.identity.model_dump(),
+                "links": GLOBAL_SESSION.links.model_dump(),
+                "resume_filename": GLOBAL_SESSION.resume_filename,
+                "node_count": len(nodes),
+                "has_profile": (
+                    bool(GLOBAL_SESSION.identity.first_name)
+                    or bool(GLOBAL_SESSION.identity.email)
+                    or len(nodes) > 0
+                ),
             },
         )
 
-    def _handle_evidence_graph(self, profile_id: str) -> None:
+    def _handle_update_profile(self, body: dict[str, Any]) -> None:
+        """Update candidate identity and links."""
+        ident_data = body.get("identity", {})
+        links_data = body.get("links", {})
+
+        GLOBAL_SESSION.identity = Identity(
+            first_name=ident_data.get("first_name", GLOBAL_SESSION.identity.first_name),
+            last_name=ident_data.get("last_name", GLOBAL_SESSION.identity.last_name),
+            email=ident_data.get("email", GLOBAL_SESSION.identity.email),
+            phone=ident_data.get("phone", GLOBAL_SESSION.identity.phone),
+            location=ident_data.get("location", GLOBAL_SESSION.identity.location),
+        )
+
+        GLOBAL_SESSION.links = Links(
+            github=links_data.get("github", GLOBAL_SESSION.links.github),
+            linkedin=links_data.get("linkedin", GLOBAL_SESSION.links.linkedin),
+            portfolio=links_data.get("portfolio", GLOBAL_SESSION.links.portfolio),
+        )
+
+        self._handle_get_profile()
+
+    def _handle_reset_profile(self) -> None:
+        """Reset the active candidate store to empty state."""
+        GLOBAL_SESSION.reset()
+        self._send_json(200, {"status": "reset", "node_count": 0})
+
+    def _handle_evidence_graph(self) -> None:
         """Return graph nodes, edges, and quarantine boundaries for visual graph rendering."""
-        store = GLOBAL_STORES.get_store(profile_id)
+        store = GLOBAL_SESSION.store
         nodes_raw = get_all_nodes(store)
         edges_raw = store.get_edges() if hasattr(store, "get_edges") else []
 
@@ -382,7 +336,6 @@ class TalentAgentUIHandler(http.server.BaseHTTPRequestHandler):
         self._send_json(
             200,
             {
-                "profile_id": profile_id,
                 "nodes": formatted_nodes,
                 "edges": formatted_edges,
                 "quarantine_rule": "G1: derived nodes are strictly quarantined from retrieval",
@@ -396,7 +349,7 @@ class TalentAgentUIHandler(http.server.BaseHTTPRequestHandler):
             self._send_error(400, "Empty posting text")
             return
 
-        GLOBAL_STORES.tier_1_calls += 1
+        GLOBAL_SESSION.tier_1_calls += 1
         lines = [line.strip("-•* ").strip() for line in posting_text.splitlines() if line.strip()]
         reqs = []
         for line in lines:
@@ -404,42 +357,36 @@ class TalentAgentUIHandler(http.server.BaseHTTPRequestHandler):
                 reqs.append(line)
 
         if not reqs:
-            reqs = [posting_text[:120]]
+            reqs = [posting_text[:140]]
 
         self._send_json(200, {"requirements": reqs[:10]})
 
     def _handle_compose(self, body: dict[str, Any]) -> None:
-        """Execute Pass 1 credited package composition against the selected evidence store."""
-        profile_id = body.get("profile_id", "profile_a")
-        posting_id = body.get("posting_id", "job_demo")
+        """Execute Pass 1 credited package composition against candidate evidence store."""
+        posting_id = body.get("posting_id", "target_job")
         reqs_raw = body.get("requirements", [])
         identity_data = body.get("identity")
 
-        store = GLOBAL_STORES.get_store(profile_id)
-        default_identity = (
-            GLOBAL_STORES.custom_identity
-            if profile_id == "custom"
-            else Identity(first_name="Candidate", last_name="User", email="candidate@example.com")
+        identity = (
+            Identity.model_validate(identity_data) if identity_data else GLOBAL_SESSION.identity
         )
-        identity = Identity.model_validate(identity_data) if identity_data else default_identity
 
         requirements = [normalise_requirement(r) for r in reqs_raw] if reqs_raw else []
 
-        GLOBAL_STORES.tier_2_calls += 1
+        GLOBAL_SESSION.tier_2_calls += 1
         package = compose_package(
             posting_id=posting_id,
             requirements=requirements,
             identity=identity,
-            store=store,
-            links=GLOBAL_STORES.custom_links if profile_id == "custom" else None,
-            materials=GLOBAL_STORES.custom_materials if profile_id == "custom" else None,
+            store=GLOBAL_SESSION.store,
+            links=GLOBAL_SESSION.links,
+            materials=GLOBAL_SESSION.materials,
         )
 
         self._send_json(200, {"package": package.model_dump()})
 
     def _handle_promote_statement(self, body: dict[str, Any]) -> None:
-        """Promote an elicited user answer directly into a Statement and attested Accomplishment."""
-        profile_id = body.get("profile_id", "custom")
+        """Promote an elicited candidate answer directly into a Statement and Accomplishment."""
         raw_answer = body.get("answer", "").strip()
         skills = body.get("skills", [])
 
@@ -447,12 +394,13 @@ class TalentAgentUIHandler(http.server.BaseHTTPRequestHandler):
             self._send_error(400, "Answer cannot be empty")
             return
 
-        store = GLOBAL_STORES.get_store(profile_id)
+        matched_skills = _extract_and_save_skills(GLOBAL_SESSION.store, raw_answer, skills)
+
         stmt, acc = promote_statement(
             answer=raw_answer,
-            store=store,
+            store=GLOBAL_SESSION.store,
             claim=raw_answer.split("\n")[0][:120],
-            skills=skills,
+            skills=matched_skills,
         )
 
         self._send_json(
@@ -467,7 +415,7 @@ class TalentAgentUIHandler(http.server.BaseHTTPRequestHandler):
         )
 
     def _handle_upload_resume(self, body: dict[str, Any]) -> None:
-        """Accept resume text or base64 PDF and ingest into custom candidate profile."""
+        """Accept resume text or base64 PDF and ingest into candidate evidence store."""
         resume_text = body.get("text", "")
         content_base64 = body.get("content_base64")
         filename = body.get("filename", "resume.pdf")
@@ -487,16 +435,19 @@ class TalentAgentUIHandler(http.server.BaseHTTPRequestHandler):
 
         lines = [line.strip("-•* ").strip() for line in resume_text.splitlines() if line.strip()]
         added_count = 0
-        for line in lines[:8]:
+        for line in lines:
             if len(line) > 20 and not line.startswith("http"):
+                line_skills = _extract_and_save_skills(GLOBAL_SESSION.store, line)
                 promote_statement(
                     answer=line,
-                    store=GLOBAL_STORES.custom,
-                    claim=line[:100],
+                    store=GLOBAL_SESSION.store,
+                    claim=line[:120],
+                    skills=line_skills,
                 )
                 added_count += 1
 
-        GLOBAL_STORES.custom_materials = Materials(resume=Path(filename))
+        GLOBAL_SESSION.resume_filename = filename
+        GLOBAL_SESSION.materials = Materials(resume=Path(filename))
         self._send_json(
             200,
             {
@@ -504,23 +455,25 @@ class TalentAgentUIHandler(http.server.BaseHTTPRequestHandler):
                 "filename": filename,
                 "extracted_length": len(resume_text),
                 "nodes_added": added_count,
-                "total_custom_nodes": len(get_all_nodes(GLOBAL_STORES.custom)),
+                "total_nodes": len(get_all_nodes(GLOBAL_SESSION.store)),
             },
         )
 
     def _handle_add_statement(self, body: dict[str, Any]) -> None:
-        """Add custom candidate statement verbatim to the custom store."""
+        """Add candidate statement verbatim to the evidence store."""
         raw_text = body.get("raw_text", "").strip()
         skills = body.get("skills", [])
         if not raw_text:
             self._send_error(400, "Statement text is required")
             return
 
+        matched_skills = _extract_and_save_skills(GLOBAL_SESSION.store, raw_text, skills)
+
         stmt, acc = promote_statement(
             answer=raw_text,
-            store=GLOBAL_STORES.custom,
+            store=GLOBAL_SESSION.store,
             claim=raw_text.split("\n")[0][:120],
-            skills=skills,
+            skills=matched_skills,
         )
 
         self._send_json(
@@ -534,7 +487,7 @@ class TalentAgentUIHandler(http.server.BaseHTTPRequestHandler):
         )
 
     def _handle_sync_github(self, body: dict[str, Any]) -> None:
-        """Ingest repository artifacts into custom candidate profile."""
+        """Ingest repository artifacts into candidate evidence store."""
         username = body.get("username", "developer").strip()
         repo = body.get("repo", "project").strip()
 
@@ -546,19 +499,27 @@ class TalentAgentUIHandler(http.server.BaseHTTPRequestHandler):
             url=f"https://github.com/{username}/{repo}",
             metadata={"summary": f"Contributions and fixtures for {repo}."},
         )
-        GLOBAL_STORES.custom.save_node(art)
+        GLOBAL_SESSION.store.save_node(art)
+
+        matched_skills = _extract_and_save_skills(
+            GLOBAL_SESSION.store, f"GitHub repository {username}/{repo} infrastructure"
+        )
+        if not matched_skills:
+            matched_skills = _extract_and_save_skills(
+                GLOBAL_SESSION.store, "python distributed systems"
+            )
 
         acc_id = f"acc_gh_{abs(hash(username + repo)) % 1000000:06d}"
         acc = Accomplishment(
             id=acc_id,
             claim=f"Built core services and infrastructure for {username}/{repo}",
-            skills=["Python", "Distributed Systems"],
+            skills=matched_skills,
             evidence=[art_id],
             attestation_class=AttestationClass.VERIFIABLE,
         )
-        GLOBAL_STORES.custom.save_node(acc)
+        GLOBAL_SESSION.store.save_node(acc)
 
-        GLOBAL_STORES.custom.save_edge(
+        GLOBAL_SESSION.store.save_edge(
             Edge(
                 source_id=art_id,
                 source_type=NodeType.ARTIFACT,
@@ -567,6 +528,16 @@ class TalentAgentUIHandler(http.server.BaseHTTPRequestHandler):
                 edge_type=EdgeType.EVIDENCES,
             )
         )
+        for sk_id in matched_skills:
+            GLOBAL_SESSION.store.save_edge(
+                Edge(
+                    source_id=acc_id,
+                    source_type=NodeType.ACCOMPLISHMENT,
+                    target_id=sk_id,
+                    target_type=NodeType.SKILL,
+                    edge_type=EdgeType.DEMONSTRATES,
+                )
+            )
 
         self._send_json(
             200,
@@ -581,6 +552,13 @@ class TalentAgentUIHandler(http.server.BaseHTTPRequestHandler):
     def _handle_ats_fill(self, body: dict[str, Any]) -> None:
         """Simulate Pass 2 deterministic ATS form execution with field resolution mapping."""
         platform = body.get("platform", "greenhouse").lower()
+        package_dict = body.get("package", {})
+
+        ident = package_dict.get("identity", {})
+        first_name = ident.get("first_name") or GLOBAL_SESSION.identity.first_name or "Candidate"
+        last_name = ident.get("last_name") or GLOBAL_SESSION.identity.last_name or "User"
+        email = ident.get("email") or GLOBAL_SESSION.identity.email or "candidate@example.com"
+        phone = ident.get("phone") or GLOBAL_SESSION.identity.phone or "555-0199"
 
         try:
             field_map = load_map(platform)
@@ -604,30 +582,35 @@ class TalentAgentUIHandler(http.server.BaseHTTPRequestHandler):
                     "target_path": "identity.first_name",
                     "resolved_type": "deterministic",
                     "status": "filled",
+                    "value": first_name,
                 },
                 {
                     "selector": "#last_name",
                     "target_path": "identity.last_name",
                     "resolved_type": "deterministic",
                     "status": "filled",
+                    "value": last_name,
                 },
                 {
                     "selector": "#email",
                     "target_path": "identity.email",
                     "resolved_type": "deterministic",
                     "status": "filled",
+                    "value": email,
                 },
                 {
                     "selector": "#phone",
                     "target_path": "identity.phone",
                     "resolved_type": "deterministic",
                     "status": "filled",
+                    "value": phone,
                 },
                 {
                     "selector": "#resume",
                     "target_path": "materials.resume",
                     "resolved_type": "deterministic",
                     "status": "filled",
+                    "value": GLOBAL_SESSION.resume_filename or "Resume.pdf",
                 },
             ]
 
@@ -696,9 +679,9 @@ def create_ui_server(
 def run_server(host: str = "127.0.0.1", port: int = DEFAULT_PORT) -> None:
     """Start the TalentAgent UI server on the specified host and port."""
     server = create_ui_server(host=host, port=port)
-    print(f"TalentAgent Review UI server running at http://{host}:{port}/")
+    print(f"TalentAgent UI server running at http://{host}:{port}/")
     try:
         server.serve_forever()
     except KeyboardInterrupt:
-        print("\nStopping TalentAgent Review UI server.")
+        print("\nStopping TalentAgent UI server.")
         server.server_close()

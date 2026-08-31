@@ -16,7 +16,7 @@ import { SystemStatus } from '../../models/talentagent.models';
         </div>
         <div>
           <div class="brand-title">TalentAgent</div>
-          <div class="brand-subtitle">Phase 2.5 Demo · Review Surface</div>
+          <div class="brand-subtitle">Autonomous Job Search & Application System</div>
         </div>
       </div>
 
@@ -30,7 +30,7 @@ import { SystemStatus } from '../../models/talentagent.models';
             <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
             <circle cx="12" cy="7" r="4"/>
           </svg>
-          Profile Studio
+          Candidate Profile
         </button>
 
         <button
@@ -44,7 +44,7 @@ import { SystemStatus } from '../../models/talentagent.models';
             <line x1="16" y1="13" x2="8" y2="13"/>
             <line x1="16" y1="17" x2="8" y2="17"/>
           </svg>
-          Two-Pass Apply (Hero Flow)
+          Apply & Compose
         </button>
 
         <button
@@ -59,7 +59,7 @@ import { SystemStatus } from '../../models/talentagent.models';
             <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/>
             <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
           </svg>
-          Evidence Graph Explorer
+          Evidence Graph
         </button>
 
         <button
@@ -70,7 +70,7 @@ import { SystemStatus } from '../../models/talentagent.models';
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
           </svg>
-          Guardrails & System
+          System & Guardrails
         </button>
       </nav>
 
@@ -84,12 +84,12 @@ import { SystemStatus } from '../../models/talentagent.models';
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <polyline points="20 6 9 17 4 12"/>
           </svg>
-          G1-G7 Guardrails Active
+          G1-G7 Enforced
         </div>
 
         <div class="status-indicator" [class.connected]="isConnected">
           <span class="status-dot"></span>
-          {{ isConnected ? 'API Connected' : 'Offline Mode' }}
+          {{ isConnected ? 'Live Backend' : 'Offline Session' }}
         </div>
       </div>
     </header>
@@ -206,7 +206,7 @@ import { SystemStatus } from '../../models/talentagent.models';
   `],
 })
 export class NavbarComponent {
-  @Input() activeTab: string = 'compose';
+  @Input() activeTab: string = 'profile';
   @Input() status: SystemStatus | null = null;
   @Input() isConnected: boolean = false;
   @Output() tabChange = new EventEmitter<string>();

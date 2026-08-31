@@ -1,4 +1,4 @@
-"""Tests for the TalentAgent UI server endpoints and data handlers (Phase 2.5).
+"""Tests for the TalentAgent UI server endpoints and data handlers.
 
 Pins the REST API responses, candidate profile ingestion, statement promotion, and ATS fills.
 """
@@ -8,25 +8,7 @@ from __future__ import annotations
 from typing import Any
 from unittest.mock import MagicMock
 
-from talentagent.ui.server import TalentAgentUIHandler
-
-
-class DummyRequest:
-    """Mock socket request object for testing the HTTP handler."""
-
-    def __init__(self, method: str, path: str, body: bytes = b"") -> None:
-        """Initialize mock socket request."""
-        self.method = method
-        self.path = path
-        self.body = body
-
-    def makefile(self, *args: object, **kwargs: object) -> object:
-        """Return dummy file streams for input and output."""
-        import io
-
-        if args and "r" in str(args[0]):
-            return io.BytesIO(self.body)
-        return io.BytesIO()
+from talentagent.ui.server import GLOBAL_SESSION, TalentAgentUIHandler
 
 
 def test_status_endpoint() -> None:
@@ -58,63 +40,56 @@ def test_status_endpoint() -> None:
     assert "quotas" in data
 
 
-def test_profiles_endpoint() -> None:
-    """Profiles endpoint returns metadata for Profile A, Profile B, and Custom candidates."""
+def test_profile_and_statement_flow() -> None:
+    """Profile endpoint allows updating identity and adding statements."""
+    GLOBAL_SESSION.reset()
     handler = TalentAgentUIHandler.__new__(TalentAgentUIHandler)
     sent_data: list[tuple[int, dict[str, Any]]] = []
-    handler._send_json = lambda code, data: sent_data.append((code, data))  # type: ignore[assignment]
-    handler.path = "/api/profiles"
 
-    handler.do_GET()
+    def mock_send(status_code: int, data: Any) -> None:
+        sent_data.append((status_code, data))
 
+    handler._send_json = mock_send  # type: ignore[method-assign]
+
+    # Update candidate profile
+    update_body = {
+        "identity": {
+            "first_name": "Jordan",
+            "last_name": "Lee",
+            "email": "jordan.lee@example.com",
+            "location": "Seattle, WA",
+        },
+        "links": {
+            "github": "https://github.com/jordanlee",
+        },
+    }
+    handler._handle_update_profile(update_body)
     assert len(sent_data) == 1
-    _, data = sent_data[0]
-    profile_ids = [p["id"] for p in data["profiles"]]
-    assert "profile_a" in profile_ids
-    assert "profile_b" in profile_ids
-    assert "custom" in profile_ids
+    _, prof_res = sent_data[-1]
+    assert prof_res["identity"]["first_name"] == "Jordan"
+    assert prof_res["has_profile"] is True
 
+    # Add raw statement
+    stmt_body = {
+        "raw_text": "Architected streaming distributed pub/sub pipeline in Python.",
+        "skills": ["Python", "Distributed Systems"],
+    }
+    handler._handle_add_statement(stmt_body)
+    _, stmt_res = sent_data[-1]
+    assert stmt_res["status"] == "added"
+    assert stmt_res["attestation_class"] == "attested"
 
-def test_evidence_graph_endpoint() -> None:
-    """Evidence graph endpoint returns nodes and edges with attestation information."""
-    handler = TalentAgentUIHandler.__new__(TalentAgentUIHandler)
-    sent_data: list[tuple[int, dict[str, Any]]] = []
-    handler._send_json = lambda code, data: sent_data.append((code, data))  # type: ignore[assignment]
-    handler.path = "/api/evidence-graph?profile_id=profile_a"
+    # Verify graph now has nodes
+    handler._handle_evidence_graph()
+    _, graph_res = sent_data[-1]
+    assert len(graph_res["nodes"]) > 0
 
-    handler.do_GET()
-
-    assert len(sent_data) == 1
-    _, data = sent_data[0]
-    assert data["profile_id"] == "profile_a"
-    assert len(data["nodes"]) > 0
-
-
-def test_compose_and_promote_flow() -> None:
-    """Compose package handles requirements and promote statement adds new knowledge."""
-    handler = TalentAgentUIHandler.__new__(TalentAgentUIHandler)
-    sent_data: list[tuple[int, dict[str, Any]]] = []
-    handler._send_json = lambda code, data: sent_data.append((code, data))  # type: ignore[assignment]
-
-    # Test compose against custom candidate
+    # Compose package against requirement
     compose_body = {
-        "profile_id": "custom",
-        "posting_id": "job_1",
+        "posting_id": "job_python_lead",
         "requirements": ["5+ years of experience with Python development"],
     }
     handler._handle_compose(compose_body)
-    assert len(sent_data) == 1
     _, comp_res = sent_data[-1]
     assert "package" in comp_res
     assert len(comp_res["package"]["bullets"]) > 0
-
-    # Test statement promotion
-    promote_body = {
-        "profile_id": "custom",
-        "answer": "Architected distributed cache invalidation reducing p99 latency by 50ms.",
-        "skills": ["Distributed Systems"],
-    }
-    handler._handle_promote_statement(promote_body)
-    _, prom_res = sent_data[-1]
-    assert prom_res["status"] == "promoted"
-    assert prom_res["attestation_class"] == "attested"

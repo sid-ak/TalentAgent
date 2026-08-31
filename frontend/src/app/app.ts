@@ -23,8 +23,7 @@ import { GuardrailsViewComponent } from './views/guardrails-view/guardrails-view
   styleUrl: './app.css',
 })
 export class App implements OnInit {
-  activeTab = signal<string>('compose');
-  selectedProfileId = signal<string>('profile_a');
+  activeTab = signal<string>('profile');
   status = signal<SystemStatus | null>(null);
   isConnected = signal<boolean>(false);
 
@@ -39,9 +38,5 @@ export class App implements OnInit {
 
   onTabChange(tab: string): void {
     this.activeTab.set(tab);
-  }
-
-  onProfileSelected(profileId: string): void {
-    this.selectedProfileId.set(profileId);
   }
 }

@@ -9,18 +9,14 @@
   <main class="main-content">
     <app-profile-view
       *ngIf="activeTab() === 'profile'"
-      [selectedProfileId]="selectedProfileId()"
-      (profileSelected)="onProfileSelected($event)"
     ></app-profile-view>
 
     <app-compose-view
       *ngIf="activeTab() === 'compose'"
-      [selectedProfileId]="selectedProfileId()"
     ></app-compose-view>
 
     <app-graph-view
       *ngIf="activeTab() === 'graph'"
-      [selectedProfileId]="selectedProfileId()"
     ></app-graph-view>
 
     <app-guardrails-view

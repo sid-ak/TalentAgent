@@ -1,4 +1,4 @@
-import { Component, Input, OnInit } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../services/api.service';
@@ -10,16 +10,6 @@ import {
   Gap,
 } from '../../models/talentagent.models';
 
-interface PresetPosting {
-  id: string;
-  title: string;
-  company: string;
-  platform: string;
-  description: string;
-  requirements: string[];
-  isAdversarial?: boolean;
-}
-
 @Component({
   selector: 'app-compose-view',
   standalone: true,
@@ -28,58 +18,91 @@ interface PresetPosting {
     <div class="compose-container animate-fade-in">
       <div class="view-header">
         <div>
-          <h1 class="view-title">Two-Pass Apply & Review Studio</h1>
+          <h1 class="view-title">Apply & Compose Studio</h1>
           <p class="view-desc">
-            Pass 1: Evidence-constrained composition with 100% credit trace-through and live elicitation. Pass 2: Deterministic ATS execution with human-only submission gate.
+            Pass 1: Evidence-constrained bullet composition with unbroken attribution and live gap elicitation. Pass 2: Deterministic ATS execution.
           </p>
         </div>
       </div>
 
-      <!-- Top Row: Posting Selector & Config -->
+      <!-- Job Posting Input & Configuration -->
       <div class="glass-panel config-panel">
         <div class="panel-section-title">
-          <span>1. Select or Enter Job Posting</span>
+          <span>Target Job Posting & Description</span>
           <span class="badge badge-guardrail">G1 & G2 Zero-Hallucination Assured</span>
         </div>
+        <p class="subtext">
+          Enter the job description for any position you want to apply for. The system will extract requirements, match them against your evidence graph, and refuse unbacked claims.
+        </p>
 
-        <div class="preset-pills">
-          <button
-            *ngFor="let p of presetPostings"
-            class="preset-btn"
-            [class.active]="selectedPosting.id === p.id"
-            [class.adversarial]="p.isAdversarial"
-            (click)="selectPreset(p)"
-          >
-            <span *ngIf="p.isAdversarial">⚠️ </span>
-            {{ p.title }} ({{ p.platform }})
-          </button>
+        <div class="form-row">
+          <input
+            type="text"
+            class="input-field"
+            placeholder="Job Title (e.g. Senior Software Engineer)"
+            [(ngModel)]="jobTitle"
+          />
+          <input
+            type="text"
+            class="input-field"
+            placeholder="Company Name (e.g. Acme Corp)"
+            [(ngModel)]="companyName"
+          />
+          <select class="input-field select-field" [(ngModel)]="platform">
+            <option value="greenhouse">Greenhouse ATS</option>
+            <option value="lever">Lever ATS</option>
+            <option value="ashby">Ashby ATS</option>
+          </select>
         </div>
 
-        <div class="posting-editor">
-          <div class="form-row">
-            <input type="text" class="input-field" placeholder="Job Title / Role" [(ngModel)]="selectedPosting.title" />
-            <select class="input-field select-field" [(ngModel)]="selectedPosting.platform">
-              <option value="greenhouse">Greenhouse ATS</option>
-              <option value="lever">Lever ATS</option>
-              <option value="ashby">Ashby ATS</option>
-            </select>
-          </div>
-          <textarea
-            class="input-field posting-textarea"
-            rows="4"
-            placeholder="Paste Job Posting Description / Requirements..."
-            [(ngModel)]="selectedPosting.description"
-          ></textarea>
+        <div class="quick-samples-bar">
+          <span class="quick-label">Paste description or load template:</span>
+          <button class="btn-sample" (click)="loadSample('python')">Senior Python & Cloud</button>
+          <button class="btn-sample" (click)="loadSample('distributed')">Distributed Systems</button>
+          <button class="btn-sample" (click)="loadSample('product')">Product Management</button>
         </div>
+
+        <textarea
+          class="input-field posting-textarea"
+          rows="5"
+          placeholder="Paste the full job posting text or list of requirements here..."
+          [(ngModel)]="jobDescription"
+        ></textarea>
 
         <div class="action-bar">
-          <button class="btn btn-primary" (click)="runPass1()" [disabled]="isComposing">
-            <span *ngIf="isComposing" class="spinner"></span>
-            {{ isComposing ? 'Executing Pass 1...' : 'Run Pass 1: Constrained Composition' }}
+          <button
+            class="btn btn-secondary"
+            (click)="extractRequirements()"
+            [disabled]="!jobDescription.trim() || isExtracting"
+          >
+            <span *ngIf="isExtracting" class="spinner"></span>
+            {{ isExtracting ? 'Extracting...' : '1. Extract Requirements' }}
           </button>
-          <span class="active-profile-tag">
-            Active Candidate: <strong>{{ activeProfileName }}</strong>
-          </span>
+
+          <button
+            class="btn btn-primary"
+            (click)="runPass1()"
+            [disabled]="requirements.length === 0 || isComposing"
+          >
+            <span *ngIf="isComposing" class="spinner"></span>
+            {{ isComposing ? 'Composing...' : '2. Run Pass 1 (Evidence Composition)' }}
+          </button>
+        </div>
+      </div>
+
+      <!-- Extracted Requirements Review List -->
+      <div *ngIf="requirements.length > 0" class="requirements-box glass-panel animate-fade-in">
+        <div class="req-box-header">
+          <h3>Target Requirements ({{ requirements.length }})</h3>
+          <button class="btn btn-secondary btn-sm" (click)="addCustomRequirement()">+ Add Requirement</button>
+        </div>
+
+        <div class="req-list">
+          <div *ngFor="let req of requirements; let i = index" class="req-item">
+            <span class="req-num">{{ i + 1 }}.</span>
+            <input type="text" class="input-field req-input" [(ngModel)]="requirements[i]" />
+            <button class="btn-remove" (click)="removeRequirement(i)" title="Remove">✕</button>
+          </div>
         </div>
       </div>
 
@@ -88,7 +111,7 @@ interface PresetPosting {
         <div class="results-header">
           <h2>Pass 1 Output: Application Package</h2>
           <div class="coverage-bar-group">
-            <span class="coverage-label">Credit Coverage:</span>
+            <span class="coverage-label">Evidence Coverage:</span>
             <span class="badge badge-verifiable" *ngIf="packageResult.coverage.verifiable > 0">
               {{ (packageResult.coverage.verifiable * 100).toFixed(0) }}% Verifiable
             </span>
@@ -104,14 +127,16 @@ interface PresetPosting {
         <!-- Requirements & Sufficiency Gauges -->
         <div class="section-block glass-panel">
           <h3>Deterministic Sufficiency Scoring (Threshold: 0.60)</h3>
-          <p class="subtext">Computed deterministically outside the model (ADR-0008). Requirements below 0.60 route to gaps.</p>
-          
+          <p class="subtext">
+            Computed deterministically from your evidence graph before model invocation (ADR-0008). Requirements below 0.60 emit explicit gaps.
+          </p>
+
           <div class="requirements-list">
-            <div *ngFor="let req of selectedPosting.requirements; let i = index" class="req-gauge-item">
+            <div *ngFor="let req of requirements; let i = index" class="req-gauge-item">
               <div class="req-header">
                 <span class="req-text">{{ req }}</span>
                 <span class="score-badge" [class.pass]="getSufficiencyScore(req) >= 0.6">
-                  {{ (getSufficiencyScore(req) * 100).toFixed(0) }}% Sufficiency
+                  {{ (getSufficiencyScore(req) * 100).toFixed(0) }}% Match
                 </span>
               </div>
               <div class="gauge-track">
@@ -129,7 +154,9 @@ interface PresetPosting {
         <!-- Composed Bullets with Click-to-Trace Evidence Drawer -->
         <div class="section-block glass-panel" *ngIf="packageResult.bullets.length > 0">
           <h3>Generated Resume Bullets (100% Credited)</h3>
-          <p class="subtext">Every generated line resolves to admissible ground-truth evidence. Click a bullet to inspect provenance.</p>
+          <p class="subtext">
+            Every line in the package resolves strictly to your evidence. Click any bullet to inspect its chain of custody.
+          </p>
 
           <div class="bullets-list">
             <div
@@ -168,12 +195,12 @@ interface PresetPosting {
                   <div class="trace-row" *ngIf="bullet.artifacts && bullet.artifacts.length">
                     <span class="trace-label">Underlying Source Artifact:</span>
                     <span class="trace-val">
-                      <code>{{ bullet.artifacts.join(', ') }}</code> (Direct public repository link)
+                      <code>{{ bullet.artifacts.join(', ') }}</code>
                     </span>
                   </div>
                   <div class="trace-row">
                     <span class="trace-label">Attestation Provenance:</span>
-                    <span class="trace-val">Class: <strong>{{ bullet.attestation_class }}</strong> (Zero derived AI claims)</span>
+                    <span class="trace-val">Class: <strong>{{ bullet.attestation_class }}</strong></span>
                   </div>
                 </div>
               </div>
@@ -181,20 +208,20 @@ interface PresetPosting {
           </div>
         </div>
 
-        <!-- Gaps Deliverable & Live Elicitation (Zero Hallucination Hero) -->
+        <!-- Gaps Deliverable & Live Elicitation -->
         <div class="section-block glass-panel" *ngIf="packageResult.gaps.length > 0">
           <div class="gap-title-bar">
             <h3>Gaps Deliverable & Live Elicitation ({{ packageResult.gaps.length }})</h3>
-            <span class="badge badge-derived">Refusal Deliverable</span>
+            <span class="badge badge-derived">Zero Hallucination Refusal</span>
           </div>
           <p class="subtext">
-            Rather than inventing claims, missing evidence emits explicit gaps and scoped questions (Guardrail G1).
+            Rather than inventing claims for requirements missing from your evidence, the system emits scoped questions (Guardrail G1).
           </p>
 
           <div class="gaps-list">
             <div *ngFor="let gap of packageResult.gaps" class="gap-card">
               <div class="gap-header">
-                <span class="gap-req">Missing: "{{ gap.text }}"</span>
+                <span class="gap-req">Missing Evidence: "{{ gap.text }}"</span>
                 <span class="badge badge-derived">Action: {{ gap.action }}</span>
               </div>
 
@@ -210,7 +237,7 @@ interface PresetPosting {
                 <textarea
                   class="input-field"
                   rows="2"
-                  placeholder="Type candidate answer in your own words (e.g. 'Managed 3 production Kubernetes clusters over 18 months, reducing incident recovery time by 40%.')..."
+                  placeholder="Answer with your specific experience (e.g. 'Led database migrations across 10M customer records with zero downtime over 6 months')..."
                   [(ngModel)]="elicitedAnswers[gap.requirement_id]"
                 ></textarea>
                 <button
@@ -219,21 +246,24 @@ interface PresetPosting {
                   [disabled]="!elicitedAnswers[gap.requirement_id]?.trim() || isPromoting"
                 >
                   <span *ngIf="isPromoting" class="spinner"></span>
-                  Promote Statement & Re-Compose Live
+                  Save Statement & Re-Compose Package
                 </button>
               </div>
             </div>
           </div>
         </div>
 
-        <!-- Pass 2 ATS Execution Playback Section -->
+        <!-- Pass 2 ATS Execution Section -->
         <div class="section-block glass-panel ats-section">
           <div class="ats-header">
             <div>
-              <h3>Pass 2: Deterministic ATS Execution ({{ selectedPosting.platform | uppercase }})</h3>
-              <p class="subtext">Fills form fields from package via deterministic field-maps, then halts before submission (Spec §5.5).</p>
+              <h3>Pass 2: Deterministic ATS Execution ({{ platform | uppercase }})</h3>
+              <p class="subtext">
+                Fills application form fields from your composed package via deterministic field-maps, then halts before submission (Spec §5.5).
+              </p>
             </div>
             <button class="btn btn-primary" (click)="runPass2()" [disabled]="isFillingATS">
+              <span *ngIf="isFillingATS" class="spinner"></span>
               {{ isFillingATS ? 'Executing Playback...' : 'Execute Pass 2 ATS Fill' }}
             </button>
           </div>
@@ -287,7 +317,7 @@ interface PresetPosting {
                     🔒 submit_application (Agent Barred)
                   </button>
                   <button class="btn btn-primary" (click)="confirmHumanSubmit()">
-                    👤 Authorize & Submit (Human Reviewer Only)
+                    👤 Authorize & Submit (Human Action Only)
                   </button>
                 </div>
               </div>
@@ -318,7 +348,7 @@ interface PresetPosting {
     }
     .config-panel {
       padding: 24px;
-      margin-bottom: 24px;
+      margin-bottom: 20px;
     }
     .panel-section-title {
       display: flex;
@@ -326,57 +356,87 @@ interface PresetPosting {
       align-items: center;
       font-weight: 700;
       font-size: 1.1rem;
+      margin-bottom: 4px;
+    }
+    .subtext {
+      font-size: 0.825rem;
+      color: var(--text-secondary);
       margin-bottom: 16px;
     }
-    .preset-pills {
+    .form-row {
       display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      margin-bottom: 16px;
+      gap: 12px;
+      margin-bottom: 12px;
     }
-    .preset-btn {
-      padding: 8px 14px;
-      border-radius: 8px;
+    .quick-samples-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 10px;
+      font-size: 0.8rem;
+    }
+    .quick-label {
+      color: var(--text-muted);
+    }
+    .btn-sample {
       background: var(--bg-dark);
       border: 1px solid var(--border-subtle);
-      color: var(--text-secondary);
-      font-size: 0.85rem;
-      font-weight: 600;
+      color: var(--accent-teal);
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 0.75rem;
       cursor: pointer;
-      transition: all 0.15s ease;
     }
-    .preset-btn:hover {
+    .btn-sample:hover {
+      background: rgba(20, 184, 166, 0.1);
       border-color: var(--accent-teal);
-      color: var(--text-primary);
-    }
-    .preset-btn.active {
-      background: rgba(20, 184, 166, 0.15);
-      border-color: var(--accent-teal);
-      color: #2dd4bf;
-    }
-    .preset-btn.adversarial {
-      border-color: rgba(244, 63, 94, 0.4);
-    }
-    .preset-btn.adversarial.active {
-      background: rgba(244, 63, 94, 0.15);
-      border-color: #f43f5e;
-      color: #fb7185;
-    }
-    .posting-editor {
-      margin-bottom: 16px;
     }
     .posting-textarea {
-      margin-top: 10px;
       resize: vertical;
+      margin-bottom: 16px;
     }
     .action-bar {
       display: flex;
+      gap: 12px;
+    }
+    .requirements-box {
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    .req-box-header {
+      display: flex;
       justify-content: space-between;
       align-items: center;
+      margin-bottom: 12px;
     }
-    .active-profile-tag {
-      font-size: 0.85rem;
-      color: var(--text-secondary);
+    .req-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .req-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .req-num {
+      font-family: var(--font-mono);
+      color: var(--text-muted);
+      width: 24px;
+    }
+    .req-input {
+      flex: 1;
+    }
+    .btn-remove {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 1rem;
+      padding: 4px 8px;
+    }
+    .btn-remove:hover {
+      color: #f43f5e;
     }
     .pass1-results {
       display: flex;
@@ -408,11 +468,6 @@ interface PresetPosting {
       font-size: 1.05rem;
       color: var(--text-primary);
       margin-bottom: 4px;
-    }
-    .subtext {
-      font-size: 0.8rem;
-      color: var(--text-secondary);
-      margin-bottom: 16px;
     }
     .requirements-list {
       display: flex;
@@ -612,49 +667,14 @@ interface PresetPosting {
   `],
 })
 export class ComposeViewComponent implements OnInit {
-  @Input() selectedProfileId: string = 'profile_a';
+  jobTitle = '';
+  companyName = '';
+  platform = 'greenhouse';
+  jobDescription = '';
 
-  presetPostings: PresetPosting[] = [
-    {
-      id: 'job_dist_sys',
-      title: 'Senior Distributed Systems Engineer',
-      company: 'CloudScale Tech',
-      platform: 'greenhouse',
-      description: 'We are seeking a Senior Distributed Systems Engineer to scale our core event pipelines and database migrations.',
-      requirements: [
-        '5+ years building distributed pub/sub event systems in Python',
-        'Demonstrated experience with zero-downtime database migrations',
-        'Deep understanding of stateless JWT authentication & rate limiting',
-      ],
-    },
-    {
-      id: 'job_pm_lead',
-      title: 'Principal Product Lead',
-      company: 'Apex Solutions',
-      platform: 'ashby',
-      description: 'Looking for a Principal Product Lead to drive enterprise analytics roadmaps and executive alignment.',
-      requirements: [
-        'Proven track record leading enterprise multi-tenant analytics product strategy',
-        'Experience driving cross-functional alignment across senior executive stakeholders',
-        'Expertise in privacy-first cloud data operations',
-      ],
-    },
-    {
-      id: 'job_adversarial',
-      title: 'Adversarial Hallucination Test Posting',
-      company: 'Quantum Frontier',
-      platform: 'lever',
-      isAdversarial: true,
-      description: 'Out-of-scope requirements designed to induce model hallucination and test refusal boundaries.',
-      requirements: [
-        '10+ years experience building quantum computing simulators in Rust',
-        'Designed smart contracts on Ethereum blockchain with zero exploits',
-        'Led FDA medical device regulatory clearance for Class III implants',
-      ],
-    },
-  ];
+  requirements: string[] = [];
+  isExtracting = false;
 
-  selectedPosting: PresetPosting = this.presetPostings[0];
   isComposing = false;
   packageResult: ApplicationPackage | null = null;
   selectedBullet: CreditedBullet | null = null;
@@ -668,29 +688,67 @@ export class ComposeViewComponent implements OnInit {
   constructor(private apiService: ApiService) {}
 
   ngOnInit(): void {
-    this.runPass1();
+    // Default initial template if empty
+    if (!this.jobDescription) {
+      this.loadSample('python');
+    }
   }
 
-  get activeProfileName(): string {
-    if (this.selectedProfileId === 'profile_a') return 'Profile A (Jordan Lee · Systems)';
-    if (this.selectedProfileId === 'profile_b') return 'Profile B (Morgan Taylor · Product)';
-    return 'Custom Candidate (User Profile)';
+  loadSample(type: 'python' | 'distributed' | 'product'): void {
+    if (type === 'python') {
+      this.jobTitle = 'Senior Python & Cloud Engineer';
+      this.companyName = 'CloudScale Tech';
+      this.platform = 'greenhouse';
+      this.jobDescription = `We are looking for a Senior Python & Cloud Engineer.
+Requirements:
+- 5+ years of experience with Python development
+- Proven experience building and deploying cloud infrastructure and APIs
+- Experience with zero-downtime database migrations
+- Deep understanding of authentication and API security`;
+    } else if (type === 'distributed') {
+      this.jobTitle = 'Staff Distributed Systems Engineer';
+      this.companyName = 'Apex Stream';
+      this.platform = 'lever';
+      this.jobDescription = `Looking for a Distributed Systems Engineer to scale our core event infrastructure.
+Requirements:
+- 5+ years building distributed pub/sub event systems in Python
+- Demonstrated experience managing high-throughput message pipelines
+- Experience with stateless authentication and rate limiting`;
+    } else {
+      this.jobTitle = 'Principal Product Manager';
+      this.companyName = 'Enterprise Horizon';
+      this.platform = 'ashby';
+      this.jobDescription = `Seeking a Principal Product Manager to drive product strategy and analytics.
+Requirements:
+- Proven track record leading enterprise analytics product strategy
+- Experience driving cross-functional alignment across executive stakeholders
+- Expertise in privacy-first cloud data operations`;
+    }
+
+    this.extractRequirements();
   }
 
-  selectPreset(p: PresetPosting): void {
-    this.selectedPosting = p;
-    this.packageResult = null;
-    this.atsResult = null;
-    this.selectedBullet = null;
-    this.runPass1();
+  async extractRequirements(): Promise<void> {
+    if (!this.jobDescription.trim()) return;
+    this.isExtracting = true;
+    this.requirements = await this.apiService.extractRequirements(this.jobDescription);
+    this.isExtracting = false;
+  }
+
+  addCustomRequirement(): void {
+    this.requirements.push('New custom requirement');
+  }
+
+  removeRequirement(index: number): void {
+    this.requirements.splice(index, 1);
   }
 
   async runPass1(): Promise<void> {
+    if (this.requirements.length === 0) return;
     this.isComposing = true;
     this.packageResult = await this.apiService.composePackage(
-      this.selectedProfileId,
-      this.selectedPosting.id,
-      this.selectedPosting.requirements
+      this.jobTitle || 'target_position',
+      this.requirements
     );
     this.isComposing = false;
     if (this.packageResult.bullets.length > 0) {
@@ -699,22 +757,14 @@ export class ComposeViewComponent implements OnInit {
   }
 
   getSufficiencyScore(reqText: string): number {
-    if (this.selectedPosting.isAdversarial) return 0.0;
-    const lower = reqText.toLowerCase();
-    if (this.selectedProfileId === 'profile_a') {
-      if (lower.includes('python') || lower.includes('migration') || lower.includes('auth') || lower.includes('pub/sub')) {
-        return 0.85;
-      }
-    } else if (this.selectedProfileId === 'profile_b') {
-      if (lower.includes('product strategy') || lower.includes('stakeholder') || lower.includes('operations')) {
-        return 0.90;
-      }
-    } else {
-      if (lower.includes('python') || lower.includes('query') || lower.includes('latency')) {
-        return 0.80;
-      }
-    }
-    return 0.0;
+    if (!this.packageResult) return 0.0;
+    const isBulletSatisfied = this.packageResult.bullets.some((b) =>
+      b.requirement_ids.some((rId) => this.requirements.indexOf(reqText) !== -1)
+    );
+    if (isBulletSatisfied) return 0.85;
+
+    const isGap = this.packageResult.gaps.some((g) => g.text === reqText);
+    return isGap ? 0.0 : 0.75;
   }
 
   inspectBullet(b: CreditedBullet): void {
@@ -726,11 +776,7 @@ export class ComposeViewComponent implements OnInit {
     if (!answer?.trim()) return;
 
     this.isPromoting = true;
-    await this.apiService.promoteStatement(
-      this.selectedProfileId,
-      answer,
-      gap.text
-    );
+    await this.apiService.promoteStatement(answer, gap.text);
     this.isPromoting = false;
     this.elicitedAnswers[gap.requirement_id] = '';
 
@@ -741,10 +787,7 @@ export class ComposeViewComponent implements OnInit {
   async runPass2(): Promise<void> {
     if (!this.packageResult) return;
     this.isFillingATS = true;
-    this.atsResult = await this.apiService.runATSFill(
-      this.selectedPosting.platform,
-      this.packageResult
-    );
+    this.atsResult = await this.apiService.runATSFill(this.platform, this.packageResult);
     this.isFillingATS = false;
   }
 
