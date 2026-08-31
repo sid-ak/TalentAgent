@@ -91,12 +91,14 @@ Requires Python 3.12+ and a [Gemini API key](https://aistudio.google.com/apikey)
 3. `echo 'GEMINI_API_KEY=your-key-here' > .env`: supply the key. It is read from the environment
    first, then from this file; it is gitignored and excluded from the container image.
 4. `uv run python scripts/serve_demo.py`: start the server on http://127.0.0.1:8080.
-5. Open http://127.0.0.1:8080 and, in order: write a line or two about what you have done, paste a
-   job posting, then run the agent.
-6. Upload a resume, or paste a Greenhouse, Lever, or Ashby posting URL instead of its text. Other
-   hosts are refused by name rather than attempted, including the aggregators whose terms prohibit
-   automated access.
-7. Fill the employer's form from the result, and read your inbox to see where things stand.
+5. Open http://127.0.0.1:8080 and upload your resume, or write an entry or two by hand. Fill in
+   the contact details an employer's form asks for.
+6. Give it a posting, either as a Greenhouse, Lever, or Ashby URL or as pasted text. Other hosts
+   are refused by name rather than attempted, including the aggregators whose terms prohibit
+   automated access. Run the agent, and answer whatever it asks you.
+7. Fill the employer's form from the result.
+8. Paste in the replies an application got to see where it stands. It reads a real mailbox instead,
+   once whoever runs the deployment has connected Gmail — see below.
 
 Without a key the server still runs: composition falls back to your own wording used as-is, and the
 trace says so rather than pretending.
@@ -112,41 +114,6 @@ trace says so rather than pretending.
 
 1. `docker build -t talentagent .`: build the image.
 2. `docker run -p 8080:8080 -e HOST=0.0.0.0 -e GEMINI_API_KEY=your-key talentagent`: serve it.
-
-### Connect Gmail
-
-Step 5 reads your mailbox. Without this the surface falls back to pasting replies into a box, and
-says so; with it, the paste box disappears on its own.
-
-The scope is `gmail.readonly` and nothing else, so no token this system holds can send mail. Nothing
-in the running system can obtain a token either — step 3 is deliberately a command you run, at a
-consent screen you see, for access you can revoke.
-
-1. `gcloud services enable gmail.googleapis.com`: turn the API on for your project.
-2. In the Google Cloud console, under APIs and services:
-    1. OAuth consent screen: User type External, keep publishing status Testing, and add your own
-       Google account under Test users. Add the `.../auth/gmail.readonly` scope.
-    2. Credentials, Create credentials, OAuth client ID, Application type Desktop app. Note the
-       client ID and secret. Desktop app matters — it is what permits the `localhost` redirect the
-       next step listens on.
-3. `python3 scripts/gmail_auth.py --client-id YOUR_ID --client-secret YOUR_SECRET`: opens the
-   consent screen and prints a refresh token. It is standard library only, so no virtualenv is
-   needed. You will have to click past an "unverified app" warning, which is what Testing mode
-   means.
-4. Put all three in `.env`:
-
-    ```
-    GMAIL_CLIENT_ID=...
-    GMAIL_CLIENT_SECRET=...
-    GMAIL_REFRESH_TOKEN=...
-    ```
-
-5. Restart the server, or redeploy with the variables set (see below). `GET /api/status` reports
-   `gmail_connected`, which is how you tell it worked.
-
-Two limits worth knowing. In Testing mode Google expires refresh tokens after seven days, so this
-stops working after a week until you re-run step 3. And a refresh token is bound to the client that
-issued it: mixing a token from one OAuth client with another client's ID returns `invalid_grant`.
 
 ### Deploy to Cloud Run
 
@@ -172,6 +139,35 @@ A first deploy on a fresh project fails with a 403 on `storage.objects.get`: the
 service account cannot read Cloud Build's source bucket until it is granted
 `roles/cloudbuild.builds.builder`, `roles/storage.objectViewer`, `roles/logging.logWriter`, and
 `roles/artifactregistry.writer`.
+
+### Connecting Gmail, for whoever operates a deployment
+
+Step 5 reads a mailbox. Nothing here is asked of the people who use the surface — the OAuth client
+belongs to whoever runs the instance, and it is configured once. Skip this and the surface falls
+back to pasting replies into a box, and says so.
+
+The scope is `gmail.readonly` and nothing else, so no token the deployment holds can send mail.
+Nothing in the running system can obtain a token either: step 3 is a command a human runs, at a
+consent screen they see, for access they can revoke.
+
+1. `gcloud services enable gmail.googleapis.com`: turn the API on for your project.
+2. In the console, under APIs and services: set the OAuth consent screen to External, leave it in
+   Testing, add your own account under Test users, and add the `.../auth/gmail.readonly` scope.
+   Then create an OAuth client ID of type Desktop app — that type is what permits the `localhost`
+   redirect the next step listens on.
+3. `python3 scripts/gmail_auth.py --client-id YOUR_ID --client-secret YOUR_SECRET`: opens the
+   consent screen and prints a refresh token. Standard library only, so no virtualenv is needed.
+   Testing mode shows an "unverified app" warning you click past.
+4. Put `GMAIL_CLIENT_ID`, `GMAIL_CLIENT_SECRET`, and `GMAIL_REFRESH_TOKEN` in `.env`, or pass them
+   to Cloud Run as shown above. `GET /api/status` reports `gmail_connected`, which is how you know
+   it worked.
+
+Two limits. Testing mode expires refresh tokens after seven days. And a refresh token is bound to
+the client that issued it, so mixing one client's token with another's ID returns `invalid_grant`.
+
+A deployment holds one token, so it reads one mailbox — the operator's. There is no per-user
+sign-in, which is why the hosted instance is a demonstration rather than a service. Adding one
+means a web OAuth flow and per-session token storage, neither of which exists.
 
 ## How the hackathon requirements are met
 
