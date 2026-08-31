@@ -58,6 +58,9 @@ ignore = [
 [tool.ruff.lint.per-file-ignores]
 # Test bodies may be long; the docstring rule still applies (D is not ignored here).
 "tests/**" = ["ANN201", "ANN001"]
+# The one permitted HTTP call site in the system. Everything else routes through it, which is what
+# the TID251 ban below exists to guarantee (G5).
+"talentagent/net/fetch.py" = ["TID251"]
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"
