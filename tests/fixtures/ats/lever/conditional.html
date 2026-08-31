@@ -1,0 +1,28 @@
+<!doctype html>
+<!-- Lever form with a follow-up question revealed by an earlier answer. -->
+<html lang="en"><head><meta charset="utf-8"><title>Staff Engineer - Apply</title></head>
+<body>
+<div class="application-page">
+  <form class="application-form" action="/apply" method="post">
+    <label class="application-label" for="lever-name">Full name<span class="required">✱</span></label>
+    <input id="lever-name" type="text" name="name" required>
+
+    <label class="application-label" for="lever-email">Email<span class="required">✱</span></label>
+    <input id="lever-email" type="email" name="email" required>
+
+    <label class="application-label" for="card0-f0">Are you currently employed?</label>
+    <select id="card0-f0" name="cards[c92a3b4d-1f55-4a88-b021-2d3e4f5a6b7c][field0]">
+      <option value=""></option><option value="Yes">Yes</option><option value="No">No</option>
+    </select>
+
+    <label class="application-label" for="card0-f1"
+           data-shown-when="cards[c92a3b4d-1f55-4a88-b021-2d3e4f5a6b7c][field0]=Yes">
+      What is your notice period?</label>
+    <input id="card0-f1" type="text" hidden
+           data-shown-when="cards[c92a3b4d-1f55-4a88-b021-2d3e4f5a6b7c][field0]=Yes"
+           name="cards[c92a3b4d-1f55-4a88-b021-2d3e4f5a6b7c][field1]">
+
+    <button type="submit" class="postings-btn" id="btn-submit">Submit application</button>
+  </form>
+</div>
+</body></html>

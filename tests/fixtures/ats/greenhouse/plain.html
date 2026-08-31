@@ -1,0 +1,33 @@
+<!doctype html>
+<!-- Greenhouse standard application form. Field names follow the job_application[...] convention
+     the platform uses; see tests/fixtures/ats/CAPTURE.md for how to refresh this from a live page. -->
+<html lang="en"><head><meta charset="utf-8"><title>Apply - Backend Engineer</title></head>
+<body>
+<main id="application_form">
+  <h1>Backend Engineer</h1>
+  <form id="application-form" action="/applications" method="post">
+    <label for="first_name">First Name <span class="required">*</span></label>
+    <input type="text" id="first_name" name="job_application[first_name]" required>
+
+    <label for="last_name">Last Name <span class="required">*</span></label>
+    <input type="text" id="last_name" name="job_application[last_name]" required>
+
+    <label for="email">Email <span class="required">*</span></label>
+    <input type="email" id="email" name="job_application[email]" required>
+
+    <label for="phone">Phone</label>
+    <input type="tel" id="phone" name="job_application[phone]">
+
+    <label for="job_application_location">Location (City)</label>
+    <input type="text" id="job_application_location" name="job_application[location]">
+
+    <label for="job_application_urls_linkedin">LinkedIn Profile</label>
+    <input type="url" id="job_application_urls_linkedin" name="job_application[urls][LinkedIn]">
+
+    <label for="job_application_urls_github">GitHub URL</label>
+    <input type="url" id="job_application_urls_github" name="job_application[urls][GitHub]">
+
+    <button type="submit" id="submit_app" name="commit">Submit Application</button>
+  </form>
+</main>
+</body></html>
