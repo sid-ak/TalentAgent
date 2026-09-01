@@ -78,4 +78,3 @@ def test_promote_statement_preserves_long_claim_without_truncation(tmp_path: Pat
         store=store,
     )
     assert acc.claim == long_text
-

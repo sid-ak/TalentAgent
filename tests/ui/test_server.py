@@ -123,4 +123,3 @@ def test_statement_claim_retains_full_text_in_evidence_graph() -> None:
     acc_nodes = [n for n in graph_res["nodes"] if n["type"] == "accomplishment"]
     assert len(acc_nodes) == 1
     assert acc_nodes[0]["claim"] == long_statement
-
