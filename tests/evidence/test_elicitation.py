@@ -61,3 +61,21 @@ def test_promote_statement_stores_verbatim_raw_text_and_attested_class(tmp_path:
     ev = store.supporting_evidence(acc.id)
     assert len(ev) == 1
     assert ev[0].id == stmt.id
+
+
+def test_promote_statement_preserves_long_claim_without_truncation(tmp_path: Path) -> None:
+    """Long candidate statements are not truncated when creating an accomplishment claim."""
+    store = LocalEvidenceStore(tmp_path / "store")
+    long_text = (
+        "Architected and deployed a multi-region distributed streaming pipeline handling over "
+        "500k events/sec using Apache Kafka and Rust, reducing end-to-end data latency from "
+        "15 seconds to under 200ms across 4 AWS availability zones."
+    )
+    assert len(long_text) > 120
+
+    stmt, acc = promote_statement(
+        answer=long_text,
+        store=store,
+    )
+    assert acc.claim == long_text
+

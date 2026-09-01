@@ -98,7 +98,7 @@ def promote_statement(
     store.save_node(stmt)
 
     acc_id = f"acc_{abs(hash(raw_text)) % 1000000:06d}"
-    canonical_claim = claim or raw_text.strip().split("\n")[0][:120]
+    canonical_claim = claim if claim is not None else raw_text.strip()
 
     acc = Accomplishment(
         id=acc_id,
